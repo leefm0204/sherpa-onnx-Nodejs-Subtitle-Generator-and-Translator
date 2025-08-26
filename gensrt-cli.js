@@ -111,7 +111,9 @@ const saveSrt = async (segments, outPath) => {
 const safeFree = (obj) => {
   try {
     if (obj && typeof obj.free === "function") obj.free();
-  } catch {}
+  } catch {
+    // Silently ignore errors when freeing objects
+  }
 };
 
 const getAudioFiles = async (inputPath) => {
@@ -135,7 +137,9 @@ const getAudioFiles = async (inputPath) => {
             filesToProcess.push(fullPath);
           }
         }
-      } catch {}
+      } catch {
+        // Silently ignore errors when checking file stats
+      }
     }
   } else if (audioExt.has(path.extname(inputPath).toLowerCase())) {
     const srtPath = inputPath.replace(/\.[^.]*$/, ".srt");
@@ -149,7 +153,7 @@ const getAudioFiles = async (inputPath) => {
   return filesToProcess;
 };
 
-const getDuration = (inputFile) => new Promise((resolve, reject) => {
+const getDuration = (inputFile) => new Promise((resolve) => {
   const ffprobe = spawn(ffprobePath, [
     "-v", "error",
     "-show_entries", "format=duration",
@@ -306,8 +310,8 @@ const main = async () => {
     for (const file of filesToProcess) {
       try {
         await processFile(file);
-      } catch (err) {
-        console.error(chalk.yellow(`⚠️ Skipping to next file due to error.`));
+      } catch (error) {
+        console.error(chalk.yellow(`⚠️ Skipping to next file due to error: ${error.message}`));
       }
     }
 
