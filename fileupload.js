@@ -1,15 +1,7 @@
-// fileupload.js - Module for handling file uploads with original names (revised)
-// - fixes mojibake for non-ASCII filenames (decode latin1 -> utf8)
-// - sanitizes filenames and truncates to safe byte length
-// - saves uploaded file using the same (normalized) filename and OVERWRITES if exists
-// - preserves existing stream-based saving and cleanup logic
-
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { Readable } from 'node:stream';
 
-import chokidar from 'chokidar';
 import multer from 'multer';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -59,11 +51,11 @@ function fixEncoding(name) {
 function sanitizeName(name) {
   if (!name) return 'file';
   // remove null bytes and control chars
-  let out = name.replaceAll(/[\0-\u001F\u007F]/g, '');
+  let out = name.replace(/[\\0-\\x1F\\x7F]/g, '');
   // replace path separators and other problematic chars
-  out = out.replaceAll(/[\/\\<>:"|?*]/g, '_');
+  out = out.replace(/[\\/<>:"|?*]/g, '_');
   // collapse repeated spaces
-  out = out.replaceAll(/\s+/g, ' ').trim();
+  out = out.replace(/\\s+/g, ' ').trim();
   if (out.length === 0) return 'file';
   return out;
 }
@@ -171,7 +163,7 @@ async function renameSrtToOriginal(srtPath) {
         ws.on('error', reject);
         rs.on('error', reject);
       });
-      try { await fs.promises.unlink(srtPath); } catch {}
+      try { await fs.promises.unlink(srtPath); } catch { /* ignore */ }
     }
 
     console.log(`Moved SRT to Downloads: ${safeSrtFilename}`);
