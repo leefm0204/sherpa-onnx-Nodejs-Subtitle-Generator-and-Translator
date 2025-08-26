@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import fs from "node:fs/promises";
 import path from "node:path";
 import https from "node:https";
@@ -48,9 +47,9 @@ function generateTk(text) {
         else {
             if (l < 2048) e[f++] = l >> 6 | 192;
             else {
-                if ((l & 0xFC_00) === 0xD8_00 && g + 1 < text.length &&
-                    (text.charCodeAt(g + 1) & 0xFC_00) === 0xDC_00) {
-                    l = 0x1_00_00 + (((l & 0x3_FF) << 10) | (text.charCodeAt(++g) & 0x3_FF));
+                if ((l & 0xFC00) === 0xD800 && g + 1 < text.length &&
+                    (text.charCodeAt(g + 1) & 0xFC00) === 0xDC00) {
+                    l = 0x10000 + (((l & 0x3FF) << 10) | (text.charCodeAt(++g) & 0x3FF));
                     e[f++] = l >> 18 | 240;
                     e[f++] = l >> 12 & 63 | 128;
                 } else e[f++] = l >> 12 | 224;
@@ -109,7 +108,7 @@ async function translateFile(filePath, sourceLang, tgtLang, index, total) {
 
     // Save translated SRT files directly to /sdcard/Download directory
     // Sanitize and truncate filename to prevent issues with long filenames or special characters
-    let safeBaseName = baseName.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_'); // Replace problematic ASCII characters
+    let safeBaseName = baseName.replace(/[\\x00-\\x1f\\x7f<>:"/\\|?*]/g, '_'); // Replace problematic ASCII characters
     // Truncate to a safe length while preserving Unicode characters
     if (Buffer.byteLength(safeBaseName, 'utf8') > 150) {
         // Gradually trim the string to fit within the byte limit
