@@ -1,3 +1,4 @@
+// gensrt.js - Optimized for better memory management
 import path from 'path';
 import { promises as fs } from 'fs';
 import { spawn } from 'child_process';
