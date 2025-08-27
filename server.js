@@ -8,7 +8,7 @@ import express from 'express';
 import { WebSocketServer } from 'ws';
 
 import { uploadSingleFile, cleanupUploadedFiles } from './fileupload.js';
-import { getCachedSystemInfo } from './cache-optimization.js';
+import { getCachedSystemInfo, clearFileCache } from './cache-optimization.js';
 
 // Enable explicit garbage collection
 if (global.gc) {
@@ -21,8 +21,6 @@ if (global.gc) {
 let activeTranscriptionProcesses = new Map(); // Map to track multiple processes
 let activeTranslationProcesses = new Map(); // Map to track multiple translation processes
 
-
-
 // Track uploaded files for cleanup and to determine SRT output location
 let uploadedFiles = new Set();
 
@@ -33,6 +31,11 @@ let cancelTranslation = false;
 // global cancel flags to stop all processes
 let cancelAllTranscription = false;
 let cancelAllTranslation = false;
+
+// WebSocket client tracking
+let clients = new Map();
+let heartbeatInterval = null;
+const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 
 // __dirname helper for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -51,8 +54,8 @@ app.post('/api/upload', uploadSingleFile('file'), async (request, res) => {
   }
   
   try {
-    // Track uploaded file for cleanup
-    uploadedFiles.add(request.file.path);
+    // Track uploaded file for cleanup (use resolved path for consistency)
+    uploadedFiles.add(path.resolve(request.file.path));
     console.log('File uploaded:', request.file);
     
     // Immediately start transcription for the uploaded file
@@ -84,7 +87,7 @@ app.post('/api/upload', uploadSingleFile('file'), async (request, res) => {
         
         const transcriberPath = path.join(__dirname, 'gensrt.js');
         // This is an uploaded file
-        const transcriberArguments = [transcriberPath, filePath, '--model', 'senseVoice'];
+        const transcriberArguments = [transcriberPath, filePath, '--model', 'senseVoice', '--uploaded'];
         
         const transcriber = spawnDetached('node', transcriberArguments, {
           cwd: process.cwd(),
@@ -97,6 +100,8 @@ app.post('/api/upload', uploadSingleFile('file'), async (request, res) => {
         console.log('Spawned transcriber pid=', transcriber.pid);
         activeTranscriptionProcesses.set(transcriber.pid, transcriber);
         
+        let finalSrtPath = null;
+        
         // capture stdout/stderr
         const startTime = Date.now();
         let lastProgress = -1;
@@ -104,8 +109,8 @@ app.post('/api/upload', uploadSingleFile('file'), async (request, res) => {
         // Add error event listener to prevent process crashes
         transcriber.on('error', (error) => {
           console.error('Transcriber process error for', filename, error);
-          const index_ = transcriptionState.filesList.findIndex(x => x.name === filename);
-          if (index_ !== -1) transcriptionState.filesList[index_].status = 'error';
+          const index = transcriptionState.filesList.findIndex(x => x.name === filename);
+          if (index !== -1) transcriptionState.filesList[index].status = 'error';
           broadcast({ type: 'state_update', state: transcriptionState });
           broadcast({ type: 'file_error', filename, error: `Failed to start transcriber: ${error.message}` });
           if (activeTranscriptionProcesses.has(transcriber.pid)) {
@@ -119,7 +124,7 @@ app.post('/api/upload', uploadSingleFile('file'), async (request, res) => {
             broadcast({ type: 'debug_output', output: s });
             
             if (s.includes('Progress:')) {
-              const m = s.match(/Progress:\s*(\d+)%.*?(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)[sS]/);
+              const m = s.match(/Progress:\s*(\d+)%.*?(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)s/);
               if (m) {
                 const progress = Number(m[1]);
                 const processed = Number(m[2]);
@@ -141,6 +146,18 @@ app.post('/api/upload', uploadSingleFile('file'), async (request, res) => {
                   broadcast({ type: 'transcription_progress', filename, progress, processed, duration: total, elapsed, remaining, speed });
                 }
               }
+            } else {
+                const m1 = s.match(/SRT file saved to:\s*(.+)/);
+                const m2 = s.match(/\[DONE\]\s*Done!\s*Output:\s*(.+)/);
+                if (m1 || m2) {
+                    const p = (m1 ? m1[1] : m2[1]).trim();
+                    try {
+                        finalSrtPath = path.resolve(p);
+                        console.log('Detected transcriber output SRT path:', finalSrtPath);
+                    } catch (e) {
+                        // ignore parse errors, keep existing finalSrtPath
+                    }
+                }
             }
           });
           
@@ -168,7 +185,8 @@ app.post('/api/upload', uploadSingleFile('file'), async (request, res) => {
           if (code === 0) {
             if (index !== -1) transcriptionState.filesList[index].status = 'completed';
             broadcast({ type: 'state_update', state: transcriptionState });
-            broadcast({ type: 'file_complete', filename, srtPath: path.join('/sdcard/Download', path.basename(filePath).replace(/\.[^/.]+$/, ".srt")) });
+            // broadcast the actual final path (updated from stdout when available)
+            broadcast({ type: 'file_complete', filename, srtPath: finalSrtPath });
           } else {
             if (index !== -1) transcriptionState.filesList[index].status = 'error';
             broadcast({ type: 'state_update', state: transcriptionState });
@@ -225,8 +243,8 @@ app.post('/api/upload-srt', uploadSingleFile('file'), async (request, res) => {
   }
   
   try {
-    // Track uploaded file for cleanup
-    uploadedFiles.add(request.file.path);
+    // Track uploaded file for cleanup (use resolved path for consistency)
+    uploadedFiles.add(path.resolve(request.file.path));
     console.log('SRT file uploaded:', request.file);
     
     // Immediately start translation for the uploaded SRT file
@@ -268,7 +286,23 @@ app.post('/api/upload-srt', uploadSingleFile('file'), async (request, res) => {
         console.log('Spawned translator pid=', translator.pid);
         activeTranslationProcesses.set(translator.pid, translator);
         
-        if (translator.stdout) translator.stdout.on('data', d => broadcast({ type: 'debug_output', output: d.toString() }));
+        let translatedSrtPath = null;
+        
+        if (translator.stdout) {
+          translator.stdout.on('data', (d) => {
+            const output = d.toString();
+            broadcast({ type: 'debug_output', output });
+            
+            // Capture translated SRT file path from srt-gtk.js output
+            if (output.includes('Saved:')) {
+              const match = output.match(/Saved: (.+)$/);
+              if (match) {
+                const filename = match[1].trim();
+                translatedSrtPath = path.join('/sdcard/Download', filename);
+              }
+            }
+          });
+        }
         if (translator.stderr) translator.stderr.on('data', d => broadcast({ type: 'debug_output', output: d.toString() }));
         
         translator.on('close', (code, signal) => {
@@ -277,7 +311,21 @@ app.post('/api/upload-srt', uploadSingleFile('file'), async (request, res) => {
           if (code === 0) {
             if (index !== -1) translationState.translationQueue[index].status = 'completed';
             broadcast({ type: 'translation_state', state: translationState });
-            broadcast({ type: 'translation_complete', filename, outPath: path.join('/sdcard/Download', path.basename(filePath).replace(/\.srt$/i, `-en.srt`)) });
+            // Use the actual translated SRT path from srt-gtk.js output
+            if (translatedSrtPath) {
+              broadcast({ type: 'translation_complete', filename, outPath: translatedSrtPath });
+            } else {
+              // If no translated SRT path was captured, construct it properly
+              const baseName = path.basename(filePath, path.extname(filePath));
+              // Sanitize filename to prevent issues
+              const safeBaseName = baseName.replace(/[<>:"\/\\|?*\x00-\x1f]/g, '_');
+              // Determine output path based on whether file is uploaded
+              const isUploadedFile = uploadedFiles.has(path.resolve(filePath));
+              const finalTranslatedPath = (filePath.startsWith('/tmp/') || isUploadedFile)
+                ? path.join('/sdcard/Download', `${safeBaseName}-en.srt`)
+                : path.join(path.dirname(filePath), `${safeBaseName}-en.srt`);
+              broadcast({ type: 'translation_complete', filename, outPath: finalTranslatedPath });
+            }
           } else {
             if (index !== -1) translationState.translationQueue[index].status = 'error';
             broadcast({ type: 'translation_state', state: translationState });
@@ -473,7 +521,6 @@ app.get('/language.json', async (request, res) => {
 
 // -------------------- Transcription endpoint --------------------
 app.post('/api/start', async (request, res) => {
-  console.log('Transcription endpoint called with:', request.body);
   const { inputPath, model = 'senseVoice' } = request.body;
 
   const validModels = ['senseVoice', 'nemoCtc', 'transducer'];
@@ -521,12 +568,6 @@ app.post('/api/start', async (request, res) => {
 
       const filename = path.basename(file);
 
-      // If user cleared the list mid-run, skip files not found in state
-      if (!transcriptionState.filesList.find(x => x.name === filename)) {
-        console.log(`Skipping ${filename} (removed from list)`);
-        continue;
-      }
-
       // mark processing
       const index = transcriptionState.filesList.findIndex(x => x.name === filename);
       if (index !== -1) {
@@ -537,9 +578,12 @@ app.post('/api/start', async (request, res) => {
       broadcast({ type: 'file_start', filename });
 
       const transcriberPath = path.join(__dirname, 'gensrt.js');
-      // Check if this is an uploaded file
-      const isUploadedFile = uploadedFiles.has(file);
-      const transcriberArguments = [transcriberPath, file, '--model', model];
+      // Check if this is an uploaded file (use resolved path for consistency)
+      const isUploadedFile = uploadedFiles.has(path.resolve(file));
+      // Add --uploaded flag for uploaded files
+      const transcriberArguments = isUploadedFile 
+        ? [transcriberPath, file, '--model', model, '--uploaded']
+        : [transcriberPath, file, '--model', model];
       
       const transcriber = spawnDetached('node', transcriberArguments, {
         cwd: process.cwd(),
@@ -552,8 +596,12 @@ app.post('/api/start', async (request, res) => {
       console.log('Spawned transcriber pid=', transcriber.pid);
       activeTranscriptionProcesses.set(transcriber.pid, transcriber);
 
+      // keep a mutable final path that we can update if transcriber prints the real path
+      let finalSrtPath = null;
+
       // capture stdout/stderr
       const startTime = Date.now();
+      let lastProgress = -1;
       
       // Add error event listener to prevent process crashes
       transcriber.on('error', (error) => {
@@ -568,13 +616,13 @@ app.post('/api/start', async (request, res) => {
       });
       
       if (transcriber.stdout) {
-        let lastProgress = -1;
         transcriber.stdout.on('data', (chunk) => {
           const s = chunk.toString();
           broadcast({ type: 'debug_output', output: s });
 
+          // parse progress as before...
           if (s.includes('Progress:')) {
-            const m = s.match(/Progress:\s*(\d+)%.*?(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)[sS]/);
+            const m = s.match(/Progress:\s*(\d+)%.*?(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)s/);
             if (m) {
               const progress = Number(m[1]);
               const processed = Number(m[2]);
@@ -600,6 +648,20 @@ app.post('/api/start', async (request, res) => {
                   global.gc();
                 }
               }
+            }
+          }
+
+          // NEW: parse the actual saved path output from gensrt.js
+          // gensrt.js prints: "SRT file saved to: <path>" and also "[DONE] Done! Output: <path>"
+          const m1 = s.match(/SRT file saved to:\s*(.+)/);
+          const m2 = s.match(/\[DONE\]\s*Done!\s*Output:\s*(.+)/);
+          if (m1 || m2) {
+            const p = (m1 ? m1[1] : m2[1]).trim();
+            try {
+              finalSrtPath = path.resolve(p);
+              console.log('Detected transcriber output SRT path:', finalSrtPath);
+            } catch (e) {
+              // ignore parse errors, keep existing finalSrtPath
             }
           }
         });
@@ -629,14 +691,21 @@ app.post('/api/start', async (request, res) => {
           if (code === 0) {
             if (index !== -1) transcriptionState.filesList[index].status = 'completed';
             broadcast({ type: 'state_update', state: transcriptionState });
-            broadcast({ type: 'file_complete', filename, srtPath: path.join('/sdcard/Download', path.basename(file).replace(/\.[^/.]+$/, ".srt")) });
+            // broadcast the actual final path (updated from stdout when available)
+            if (!finalSrtPath) {
+                const baseName = path.basename(file, path.extname(file));
+                const safeBaseName = baseName.replace(/[<>:"\/\\|?*\x00-\x1f]/g, '_');
+                finalSrtPath = isUploadedFile || file.startsWith('/tmp/')
+                    ? path.join('/sdcard/Download', `${safeBaseName}.srt`)
+                    : path.join(path.dirname(file), `${safeBaseName}.srt`);
+            }
+            broadcast({ type: 'file_complete', filename, srtPath: finalSrtPath });
             logMemoryUsage(`Completed transcription for ${filename}`);
           } else {
             if (index !== -1) transcriptionState.filesList[index].status = 'error';
             broadcast({ type: 'state_update', state: transcriptionState });
             broadcast({ type: 'file_error', filename, error: `Transcription failed with code ${code} signal ${signal}` });
           }
-          // Clear active process reference only after it truly closed
           if (activeTranscriptionProcesses.has(transcriber.pid)) {
             activeTranscriptionProcesses.delete(transcriber.pid);
           }
@@ -653,7 +722,7 @@ app.post('/api/start', async (request, res) => {
           // Explicitly remove listeners to prevent memory leaks
           transcriber.removeListener('close', handleClose);
           transcriber.removeListener('error', handleError);
-          
+                    
           resolve();
         };
 
@@ -691,7 +760,6 @@ app.post('/api/start', async (request, res) => {
   }
 });
 
-// -------------------- Translation endpoint --------------------
 app.post('/api/translate', async (request, res) => {
   const { srtPath, sourceLang, targetLang } = request.body;
   if (!srtPath || !sourceLang || !targetLang) return res.status(400).json({ error: 'SRT path, source language, and target language are required' });
@@ -758,10 +826,22 @@ app.post('/api/translate', async (request, res) => {
       console.log('Spawned translator pid=', translator.pid);
       activeTranslationProcesses.set(translator.pid, translator);
 
+      let translatedSrtPath = '';
+      
       if (translator.stdout) {
         let progressCounter = 0;
         translator.stdout.on('data', (d) => {
-          broadcast({ type: 'debug_output', output: d.toString() });
+          const output = d.toString();
+          broadcast({ type: 'debug_output', output });
+          
+          // Capture translated SRT file path from srt-gtk.js output
+          if (output.includes('Saved:')) {
+            const match = output.match(/Saved: (.+)$/);
+            if (match) {
+              const filename = match[1].trim();
+              translatedSrtPath = path.join('/sdcard/Download', filename);
+            }
+          }
           
           // Periodic garbage collection during translation
           progressCounter++;
@@ -779,7 +859,20 @@ app.post('/api/translate', async (request, res) => {
           if (code === 0) {
             if (index !== -1) translationState.translationQueue[index].status = 'completed';
             broadcast({ type: 'translation_state', state: translationState });
-            broadcast({ type: 'translation_complete', filename, outPath: path.join('/sdcard/Download', path.basename(file).replace(/\.srt$/i, `-${targetLang}.srt`)) });
+            // Use the actual translated SRT path from srt-gtk.js output
+            if (translatedSrtPath) {
+              broadcast({ type: 'translation_complete', filename, outPath: translatedSrtPath });
+            } else {
+              // If no translated SRT path was captured, construct it properly
+              const baseName = path.basename(file, path.extname(file));
+              // Sanitize filename to prevent issues
+              const safeBaseName = baseName.replace(/[<>:"\/\\|?*\x00-\x1f]/g, '_');
+              // Determine output path based on whether file is uploaded
+              const finalTranslatedPath = uploadedFiles.has(file) || file.startsWith('/tmp/')
+                ? path.join('/sdcard/Download', `${safeBaseName}-${targetLang}.srt`)
+                : path.join(path.dirname(file), `${safeBaseName}-${targetLang}.srt`);
+              broadcast({ type: 'translation_complete', filename, outPath: finalTranslatedPath });
+            }
             logMemoryUsage(`Completed translation for ${filename}`);
           } else {
             if (index !== -1) translationState.translationQueue[index].status = 'error';
@@ -788,15 +881,6 @@ app.post('/api/translate', async (request, res) => {
           }
           if (activeTranslationProcesses.has(translator.pid)) {
             activeTranslationProcesses.delete(translator.pid);
-          }
-          
-          // Clean up uploaded file after translation completes
-          if (uploadedFiles.has(file)) {
-            uploadedFiles.delete(file);
-            // Call cleanup function to delete the actual file
-            cleanupUploadedFiles([file]).catch(error => {
-              console.warn(`Failed to clean up uploaded file ${file}:`, error.message);
-            });
           }
           
           // Explicitly remove listeners to prevent memory leaks
@@ -816,15 +900,6 @@ app.post('/api/translate', async (request, res) => {
             activeTranslationProcesses.delete(translator.pid);
           }
           
-          // Clean up uploaded file even if translation fails
-          if (uploadedFiles.has(file)) {
-            uploadedFiles.delete(file);
-            // Call cleanup function to delete the actual file
-            cleanupUploadedFiles([file]).catch(error => {
-              console.warn(`Failed to clean up uploaded file ${file}:`, error.message);
-            });
-          }
-          
           // Explicitly remove listeners to prevent memory leaks
           translator.removeListener('close', handleClose);
           translator.removeListener('error', handleError);
@@ -837,9 +912,6 @@ app.post('/api/translate', async (request, res) => {
       });
     }
 
-    // Clean up uploaded files after translation completes
-    await cleanupUploadedFilesHandler();
-    
     res.json({ success: true, message: 'Translation started successfully' });
   } catch (error) {
     console.error('Failed to start translation:', error);
@@ -855,7 +927,6 @@ async function cleanupUploadedFilesHandler() {
   uploadedFiles.clear();
 }
 
-// -------------------- system-info --------------------
 app.get('/system-info', async (request, res) => {
   try {
     const systemInfo = await getCachedSystemInfo();
@@ -878,11 +949,6 @@ app.get('/system-info', async (request, res) => {
   }
 });
 
-// -------------------- WebSocket Server Setup --------------------
-// WebSocket server is initialized at the top of the file
-
-// Track connected clients and their states
-const clients = new Map();
 const MESSAGE_TYPES = {
   STATE_UPDATE: 'state_update',
   TRANSLATION_STATE: 'translation_state',
@@ -891,11 +957,6 @@ const MESSAGE_TYPES = {
   ERROR: 'error'
 };
 
-// Heartbeat interval (30 seconds)
-const HEARTBEAT_INTERVAL = 30000;
-let heartbeatInterval;
-
-// Start heartbeat
 function startHeartbeat() {
   if (heartbeatInterval) clearInterval(heartbeatInterval);
   
@@ -916,7 +977,6 @@ function startHeartbeat() {
   }, HEARTBEAT_INTERVAL);
 }
 
-// Rate limiting
 const rateLimit = (ws) => {
   const client = clients.get(ws);
   if (!client) return false;
@@ -937,7 +997,6 @@ const rateLimit = (ws) => {
   return false;
 };
 
-// Handle stop transcription
 async function handleStopTranscription(ws) {
   const client = clients.get(ws);
   if (!client) return;
@@ -963,7 +1022,6 @@ async function handleStopTranscription(ws) {
   console.log(`[${client.id}] All transcription processes stopped`);
 }
 
-// Handle stop translation
 async function handleStopTranslation(ws) {
   const client = clients.get(ws);
   if (!client) return;
@@ -989,13 +1047,11 @@ async function handleStopTranslation(ws) {
   console.log(`[${client.id}] All translation processes stopped`);
 }
 
-// Clean up client resources
 function cleanupClientResources(clientId) {
   console.log(`Cleaning up resources for client ${clientId}`);
   // Add any client-specific cleanup here
 }
 
-// Handle WebSocket connections
 wss.on('connection', (ws, req) => {
   // Generate unique client ID and get client IP
   const clientId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -1050,7 +1106,7 @@ wss.on('connection', (ws, req) => {
       client.lastActivity = Date.now();
       
       // Check rate limit first
-      if (rateLimit(ws, 'message')) {
+      if (rateLimit(ws)) {
         const errorResponse = {
           type: MESSAGE_TYPES.ERROR,
           code: 'RATE_LIMIT_EXCEEDED',
@@ -1058,8 +1114,8 @@ wss.on('connection', (ws, req) => {
           timestamp: client.lastActivity
         };
         
-        if (!ws.send(JSON.stringify(errorResponse))) {
-          console.warn(`[${clientId}] Failed to send rate limit response - client may be disconnected`);
+        if (ws.readyState === ws.OPEN) {
+          ws.send(JSON.stringify(errorResponse));
         }
         return;
       }
@@ -1090,12 +1146,12 @@ wss.on('connection', (ws, req) => {
         case 'stop_process': // Legacy support
         case 'stop_transcription':
           console.log(`[${clientId}] Received ${message.type} command`);
-          await handleStopTranscription(ws, message);
+          await handleStopTranscription(ws);
           break;
           
         case 'stop_translation':
           console.log(`[${clientId}] Received stop_translation command`);
-          await handleStopTranslation(ws, message);
+          await handleStopTranslation(ws);
           break;
           
         case 'ping':
@@ -1239,3 +1295,43 @@ wss.on('connection', (ws, req) => {
 
 // Start heartbeat when server starts
 startHeartbeat();
+
+process.on('SIGINT', async () => {
+  console.log('Received SIGINT. Shutting down gracefully...');
+  // Kill all active transcription processes
+  for (const [id, process] of activeTranscriptionProcesses.entries()) {
+    console.log(`Killing transcription process ${id}`);
+    tryKillProcessTree(process);
+  }
+  
+  // Kill all active translation processes
+  for (const [id, process] of activeTranslationProcesses.entries()) {
+    console.log(`Killing translation process ${id}`);
+    tryKillProcessTree(process);
+  }
+  
+  // Close WebSocket connections
+  wss.clients.forEach((client) => {
+    client.terminate();
+  });
+  
+  // Clear file cache
+  try {
+    await clearFileCache();
+    console.log('File cache cleared.');
+  } catch (error) {
+    console.warn('Failed to clear file cache:', error.message);
+  }
+  
+  // Close server
+  server.close(() => {
+    console.log('Server closed.');
+    process.exit(0);
+  });
+  
+  // Force exit after 5 seconds if server hasn't closed
+  setTimeout(() => {
+    console.log('Forcing process exit.');
+    process.exit(0);
+  }, 5000);
+});

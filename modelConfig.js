@@ -22,7 +22,8 @@ const MODELS = {
   },
 
   nemoCtc: {
-    modelDir: "./sherpa-onnx-nemo-fast-conformer-transducer-be-de-en-es-fr-hr-it-pl-ru-uk-20k",
+    modelDir:
+      "./sherpa-onnx-nemo-fast-conformer-transducer-be-de-en-es-fr-hr-it-pl-ru-uk-20k",
     createRecognizer: (cfg) => {
       return new sherpa_onnx.OfflineRecognizer({
         featConfig: { sampleRate: cfg.sampleRate, featureDim: cfg.featDim },
@@ -47,9 +48,15 @@ const MODELS = {
         featConfig: { sampleRate: cfg.sampleRate, featureDim: cfg.featDim },
         modelConfig: {
           transducer: {
-            encoder:  path.join(cfg.modelDir, "encoder-epoch-99-avg-1.int8.onnx"),
-            decoder:  path.join(cfg.modelDir, "decoder-epoch-99-avg-1.int8.onnx"),
-            joiner:   path.join(cfg.modelDir, "joiner-epoch-99-avg-1.int8.onnx"),
+            encoder: path.join(
+              cfg.modelDir,
+              "encoder-epoch-99-avg-1.int8.onnx",
+            ),
+            decoder: path.join(
+              cfg.modelDir,
+              "decoder-epoch-99-avg-1.int8.onnx",
+            ),
+            joiner: path.join(cfg.modelDir, "joiner-epoch-99-avg-1.int8.onnx"),
             useInverseTextNormalization: 1,
           },
           tokens: path.join(cfg.modelDir, "tokens.txt"),
