@@ -1,10 +1,10 @@
 {
   "name": "Subtitle Generator and Translator",
   "version": "1.0.0",
-  "description": "backed ui for Subtitle Generator and Translator,
+  "description": "backed ui for Subtitle Generator and Translator",
   "main": "server.js",
   "scripts": {
-    "start": "LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-x64:$LD_LIBRARY_PATH node --expose-gc server.js",
+    "start": "LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-arm64:$LD_LIBRARY_PATH node --expose-gc server.js",
   },
   "keywords": [
     "transcription",
