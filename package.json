@@ -1,12 +1,10 @@
-{
-  "name": "audio-video-transcriber-server",
+k{
+  "name": "Subtitle Generator and Translator",
   "version": "1.0.0",
-  "description": "backed ui for audio/video transcription server using Sherpa-ONNX",
+  "description": "backed ui for Subtitle Generator and Translator,
   "main": "server.js",
   "scripts": {
     "start": "LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-x64:$LD_LIBRARY_PATH node --expose-gc server.js",
-    "cli": "LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-x64:$LD_LIBRARY_PATH node cli.js",
-    "dev": "LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-x64:$LD_LIBRARY_PATH node --expose-gc server.js"
   },
   "keywords": [
     "transcription",
@@ -27,14 +25,9 @@
     "cli-progress": "^3.12.0",
     "express": "^5.1.0",
     "lru-cache": "^11.1.0",
-    "minimist": "^1.2.8",
     "multer": "^2.0.2",
-    "redis": "^5.8.2",
-    "redis-server": "^1.2.2",
     "sherpa-onnx-linux-arm64": "^1.12.9",
     "sherpa-onnx-node": "^1.12.9",
-    "systeminformation": "^5.27.7",
-    "tmp": "^0.2.1",
     "ws": "^8.16.0"
   },
   "devDependencies": {
