@@ -8,6 +8,10 @@ import ffprobeInstaller from "@ffprobe-installer/ffprobe";
 import cliProgress from "cli-progress";
 import chalk from "chalk";
 import { getModel } from "./modelConfig.js";
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execPromise = promisify(exec);
 
 const ffmpegPath = ffmpegInstaller.path;
 const ffprobePath = ffprobeInstaller.path;
@@ -373,8 +377,23 @@ const processFile = async (inputFile) => {
   });
 };
 
+const cleanTmpFiles = async () => {
+  try {
+    console.log(chalk.blue("🧹 Cleaning up /tmp files..."));
+    // Only remove specific temporary files related to our process
+    await execPromise("rm -f /tmp/sherpa_* 2>/dev/null || true");
+    await execPromise("rm -f /tmp/ffmpeg_* 2>/dev/null || true");
+    console.log(chalk.green("✅ /tmp directory cleaned successfully"));
+  } catch (error) {
+    console.error(chalk.yellow(`⚠️ Warning: Failed to clean /tmp: ${error.message}`));
+  }
+};
+
 const main = async () => {
   try {
+    // Clean /tmp files before starting processing
+    await cleanTmpFiles();
+    
     console.log(chalk.blue("🔍 Searching for files to process..."));
     const filesToProcess = await getAudioFiles(inputPath);
 
