@@ -1,4 +1,3 @@
-// gensrt-cli.js
 import path from "path";
 import { promises as fs } from "fs";
 import { spawn } from "child_process";
