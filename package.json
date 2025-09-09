@@ -1,10 +1,12 @@
 {
-  "name": "Subtitle Generator and Translator",
+  "name": "audio-video-transcriber-server",
   "version": "1.0.0",
-  "description": "backed ui for Subtitle Generator and Translator",
+  "description": "backed ui for audio/video transcription server using Sherpa-ONNX",
   "main": "server.js",
   "scripts": {
-    "start": "LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-arm64:$LD_LIBRARY_PATH node --expose-gc server.js"
+    "start": "LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-x64:$LD_LIBRARY_PATH node --expose-gc server.js",
+    "cli": "LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-x64:$LD_LIBRARY_PATH node cli.js",
+    "dev": "LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-x64:$LD_LIBRARY_PATH node --expose-gc server.js"
   },
   "keywords": [
     "transcription",
@@ -21,25 +23,20 @@
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@ffprobe-installer/ffprobe": "^2.1.2",
-    "@vtex/diagnostics-nodejs": "^1.1.2",
-    "chalk": "^5.6.0",
+    "chalk": "^5.3.0",
     "cli-progress": "^3.12.0",
-    "compression": "^1.8.1",
     "express": "^5.1.0",
-    "express-rate-limit": "^8.1.0",
-    "helmet": "^8.1.0",
-    "lru-cache": "^11.2.1",
+    "lru-cache": "^11.1.0",
     "multer": "^2.0.2",
-    "sherpa-onnx-linux-arm64": "^1.12.11",
-    "sherpa-onnx-node": "^1.12.11",
-    "ws": "^8.18.3",
-    "yargs": "^17.0.0"
+    "sherpa-onnx-linux-arm64": "^1.12.9",
+    "sherpa-onnx-node": "^1.12.9",
+    "ws": "^8.16.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",
-    "eslint": "^9.35.0",
+    "eslint": "^9.34.0",
     "globals": "^16.3.0",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.0.2"
   },
   "engines": {
     "node": ">=16.0.0"

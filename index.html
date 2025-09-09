@@ -1512,11 +1512,12 @@
         const percentage = Math.min(100, progressData.progress || 0);
         progressFill.style.width = `${percentage}%`;
         if (elapsedElem) elapsedElem.textContent = progressData.elapsed ? progressData.elapsed.toFixed(1) : '0.0';
+        // Fix for inaccurate time remaining display
         if (remainingElem) {
           const remainingValue = progressData.remaining ? Math.max(0, progressData.remaining).toFixed(1) : '0.0';
           remainingElem.textContent = remainingValue;
         }
-        if (speedElem) speedElem.textContent = progressData.speed ? progressData.speed.toFixed(2) : '0.00';
+        if (speedElem) speedElem.textContent = progressData.speed ? progressData.speed.toFixed(1) : '0.0';
       }
     
       // Translation UI helpers
@@ -1964,12 +1965,11 @@
           const r = await fetch('/system-info');
           if (!r.ok) throw new Error('Failed to fetch system info');
           const data = await r.json();
-          // Convert from KB to GB (1024 * 1024 KB = 1 GB)
           const ramUsed = (data.ram.used / (1024 * 1024)).toFixed(2);
           const ramTotal = (data.ram.total / (1024 * 1024)).toFixed(2);
           const swapUsed = (data.swap.used / (1024 * 1024)).toFixed(2);
           const swapTotal = (data.swap.total / (1024 * 1024)).toFixed(2);
-          systemInfoDiv.innerHTML = `RAM: ${ramUsed} GB / ${ramTotal} GB | Swap: ${swapUsed} GB / ${swapTotal} GB | Processes: ${data.process.activeProcesses.total}`;
+          systemInfoDiv.innerHTML = `RAM: ${ramUsed} GB / ${ramTotal} GB | Swap: ${swapUsed} GB / ${swapTotal} GB`;
         } catch (err) {
           console.error('System info error', err);
           systemInfoDiv.innerHTML = 'Failed to load system info.';

@@ -1,3 +1,4 @@
+// transcriber.js
 import path from "path";
 import { promises as fs } from "fs";
 import { spawn } from "child_process";
@@ -20,7 +21,7 @@ const modelName = args.includes("--model")
 
 if (!inputPath || !modelName) {
   console.error(
-    chalk.red("Usage: node gensrt-cli.js /path/to/media --model <modelName>"),
+    chalk.red("Usage: node transcriber.js /path/to/media --model <modelName>"),
   );
   process.exit(1);
 }
@@ -82,8 +83,7 @@ class Segment {
     return this.start + this.duration;
   }
   toString() {
-    return `${formatTime(this.start)} --> ${formatTime(this.end)}
-${this.text}`;
+    return `${formatTime(this.start)} --> ${formatTime(this.end)}\n${this.text}`;
   }
 }
 
@@ -119,8 +119,7 @@ const saveSrt = async (segments, outPath) => {
   segments.sort((a, b) => a.start - b.start);
   const merged = mergeSegments(segments);
   const srtContent = merged
-    .map((s, i) => `${i + 1}
-${s.toString()}`)
+    .map((s, i) => `${i + 1}\n${s.toString()}`)
     .join("\n\n");
   await fs.writeFile(outPath, srtContent, "utf-8");
 };
