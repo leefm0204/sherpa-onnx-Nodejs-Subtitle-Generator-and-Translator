@@ -1,14 +1,14 @@
-// gensrt.js - Optimized for better memory management
-import path from "path";
-import { promises as fs } from "fs";
-import { spawn } from "child_process";
-import sherpa_onnx from "sherpa-onnx-node";
-import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
-import ffprobeInstaller from "@ffprobe-installer/ffprobe";
-import cliProgress from "cli-progress";
-import chalk from "chalk";
-import { getModel } from "./modelConfig.js";
-import os from "os";
+import { spawn } from 'node:child_process';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import chalk from 'chalk';
+import Logger from './logger.js';
+import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
+import ffprobeInstaller from '@ffprobe-installer/ffprobe';
+import sherpa_onnx from 'sherpa-onnx-node';
+import cliProgress from 'cli-progress';
+import { getModel } from './modelConfig.js';
+import os from 'os';
 
 const ffmpegPath = ffmpegInstaller.path;
 const ffprobePath = ffprobeInstaller.path;
@@ -22,11 +22,7 @@ const uploadedFlagIndex = args.indexOf("--uploaded");
 const isUploadedFile = uploadedFlagIndex !== -1;
 
 if (!inputPath || (!modelName && modelFlagIndex !== -1)) {
-  console.error(
-    chalk.red(
-      "Usage: node gensrt.js /path/to/media [--model <modelName>] [--uploaded]",
-    ),
-  );
+  Logger.error('TRANSCRIBE', 'Invalid arguments provided');
   process.exit(1);
 }
 
@@ -34,8 +30,8 @@ if (!inputPath || (!modelName && modelFlagIndex !== -1)) {
 let model;
 try {
   model = getModel(modelName);
-} catch (err) {
-  console.error(chalk.red(err.message));
+} catch (error) {
+  Logger.error('TRANSCRIBE', 'Failed to load model config', error.message);
   process.exit(1);
 }
 
@@ -161,7 +157,7 @@ async function saveSrt(segments, outPath) {
     await fs.mkdir(dir, { recursive: true });
   }
   await fs.writeFile(outPath, srtContent, "utf-8");
-  console.log(`SRT file saved to: ${outPath}`);
+  Logger.log('TRANSCRIBE', `SRT file saved to: ${outPath}`);
 }
 
 function safeFree(obj) {
@@ -202,11 +198,7 @@ async function getAudioFiles(inputPath) {
           const srtPath = fullPath.replace(/.[^.]*$/, ".srt");
           try {
             await fs.access(srtPath);
-            console.log(
-              chalk.yellow(
-                `- Skipping ${path.basename(fullPath)} (SRT already exists)`,
-              ),
-            );
+            Logger.log('TRANSCRIBE', `Skipping ${path.basename(fullPath)} (SRT already exists)`);
           } catch {
             filesToProcess.push(fullPath);
           }
@@ -219,11 +211,7 @@ async function getAudioFiles(inputPath) {
     const srtPath = inputPath.replace(/.[^.]*$/, ".srt");
     try {
       await fs.access(srtPath);
-      console.log(
-        chalk.yellow(
-          `- Skipping ${path.basename(inputPath)} (SRT already exists)`,
-        ),
-      );
+      Logger.log('TRANSCRIBE', `Skipping ${path.basename(inputPath)} (SRT already exists)`);
     } catch {
       filesToProcess = [inputPath];
     }
@@ -254,7 +242,7 @@ async function processFile(inputFile) {
   // For uploaded files, save to /sdcard/Download
   const baseName = filename.replace(/\.[^.]*$/, "");
   // More comprehensive sanitization that preserves Unicode characters including Mandarin
-  let safeBaseName = baseName.replace(/[<>:"\/|?*\x00-\x1f]/g, "_"); // Replace problematic ASCII characters
+  let safeBaseName = baseName.replace(/[\x00-\x1f"*/:<>?|]/g, "_"); // Replace problematic ASCII characters
   // Truncate to a safe length while preserving Unicode characters
   if (Buffer.byteLength(safeBaseName, "utf8") > 150) {
     // Gradually trim the string to fit within the byte limit
@@ -275,10 +263,7 @@ async function processFile(inputFile) {
       ? path.join("/sdcard/Download", srtFilename)
       : path.join(path.dirname(inputFile), srtFilename);
 
-  console.log(
-    chalk.green(`
-[PLAY] Starting: ${filename}`),
-  );
+  Logger.log('TRANSCRIBE', `Starting: ${filename}`);
 
   const recognizer = createRecognizer();
   const vad = createVad();
@@ -312,9 +297,7 @@ async function processFile(inputFile) {
   // Add periodic progress output for server.js to capture
   const progressInterval = setInterval(() => {
     const progress = Math.min(100, Math.round((processed / duration) * 100));
-    console.log(
-      `Progress: ${progress}% | ${processed.toFixed(1)}/${duration.toFixed(1)}s`,
-    );
+    Logger.log('TRANSCRIBE', `Progress: ${progress}% | ${processed.toFixed(1)}/${duration.toFixed(1)}s`);
   }, 1000); // Output progress every second
 
   return new Promise((resolve, reject) => {
@@ -494,6 +477,14 @@ async function main() {
     for (const file of filesToProcess) {
       try {
         await processFile(file);
+        
+        // Force garbage collection after each file if available
+        if (global.gc) {
+          global.gc();
+        }
+        
+        // Add a small delay between files to allow for resource cleanup
+        await new Promise(resolve => setTimeout(resolve, 100));
       } catch {
         console.error(chalk.yellow(`⚠️ Skipping to next file due to error.`));
       }

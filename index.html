@@ -1327,7 +1327,7 @@
           try {
             const data = JSON.parse(event.data);
             handleWebSocketMessage(data);
-          } catch (e) {
+          } catch (err) {
             console.error('WS message parse error', e, event.data);
           }
         };
@@ -1863,8 +1863,8 @@
           if (!r.ok) { const d = await r.json(); throw new Error(d.error || 'Failed to start'); }
           localPathInput.value = '';
           showSuccess('Transcription started');
-        } catch (e) {
-          showError(e.message);
+        } catch (error) {
+          showError(error.message);
         } finally {
           transcribePathBtn.disabled = false;
           transcribePathBtn.textContent = 'Start';

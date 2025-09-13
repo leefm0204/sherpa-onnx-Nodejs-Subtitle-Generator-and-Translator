@@ -2,6 +2,7 @@
 import { promises as fs, existsSync } from "node:fs";
 import { join } from "node:path";
 import { LRUCache } from "lru-cache";
+import Logger from './logger.js';
 
 // Ensure /tmp/genfast-cache directory exists
 const CACHE_DIR = "/tmp/genfast-cache";
@@ -9,7 +10,7 @@ if (!existsSync(CACHE_DIR)) {
   try {
     await fs.mkdir(CACHE_DIR, { recursive: true });
   } catch (error) {
-    console.warn("Failed to create cache directory:", error.message);
+    Logger.warn('CACHE', "Failed to create cache directory", error.message);
   }
 }
 
@@ -21,21 +22,10 @@ const lruCache = new LRUCache({
   allowStale: false, // Don't return stale items
 });
 
-// File-based cache functions
-async function writeCacheFile(key, value) {
-  try {
-    const filePath = join(CACHE_DIR, `${key}.json`);
-    const data = {
-      value,
-      timestamp: Date.now(),
-      ttl: 3600000, // 1 hour default TTL
-    };
-    await fs.writeFile(filePath, JSON.stringify(data), "utf8");
-    return true;
-  } catch (error) {
-    console.warn("Failed to write cache file:", error.message);
-    return false;
-  }
+async function writeCacheFile(_key, _value) {
+  // This function is intentionally left unused for future use
+  // It's kept for API consistency with the readCacheFile function
+  return false;
 }
 
 async function readCacheFile(key) {
@@ -56,7 +46,7 @@ async function readCacheFile(key) {
 
     return data.value;
   } catch (error) {
-    console.warn("Failed to read cache file:", error.message);
+    Logger.warn("CACHE", `Failed to read cache file for key: ${key}`, error.message);
     return null;
   }
 }
@@ -69,8 +59,8 @@ async function cleanupOldCache() {
 
     for (const file of files) {
       if (file.endsWith(".json")) {
+        const filePath = join(CACHE_DIR, file);
         try {
-          const filePath = join(CACHE_DIR, file);
           const data = JSON.parse(await fs.readFile(filePath, "utf8"));
 
           // Delete if expired
@@ -79,16 +69,15 @@ async function cleanupOldCache() {
           }
         } catch (error) {
           // Delete corrupted files
-          const filePath = join(CACHE_DIR, file);
           await fs.unlink(filePath).catch(() => {});
+          Logger.warn("CACHE", `Deleted corrupted cache file: ${file}`, error.message);
         }
       }
     }
   } catch (error) {
-    console.warn("Failed to cleanup cache:", error.message);
+    Logger.warn("CACHE", "Failed to cleanup cache", error.message);
   }
 }
-
 // Run cleanup every 30 minutes
 setInterval(cleanupOldCache, 30 * 60 * 1000);
 
@@ -134,7 +123,7 @@ async function setInFileCache(key, value, ttl = 3600) {
     await fs.writeFile(filePath, JSON.stringify(data), "utf8");
     return true;
   } catch (error) {
-    console.warn("Failed to write cache file:", error.message);
+    Logger.warn('CACHE', "Failed to write cache file", error.message);
     return false;
   }
 }
@@ -145,6 +134,7 @@ async function deleteFromFileCache(key) {
     await fs.unlink(filePath);
     return true;
   } catch (error) {
+    Logger.warn('CACHE', "Failed to delete cache file", error.message);
     return false;
   }
 }
@@ -159,8 +149,8 @@ async function clearFileCache() {
       }
     }
     return true;
-  } catch (error) {
-    console.warn("Failed to clear file cache:", error.message);
+  } catch (_error) {
+    Logger.warn('CACHE', "Failed to clear file cache", _error.message);
     return false;
   }
 }
@@ -216,7 +206,7 @@ async function cachedQuery(queryKey, queryFunction, ttl = 3600) {
 
     return result;
   } catch (error) {
-    console.error("Query execution error:", error.message);
+    Logger.error('CACHE', "Query execution error", error.message);
     throw error;
   }
 }
@@ -281,7 +271,7 @@ async function setTranslationCache(cacheData) {
 }
 
 // Initialize cache directory
-console.log(`Using file-based cache in ${CACHE_DIR}`);
+Logger.log('CACHE', `Using file-based cache in ${CACHE_DIR}`);
 
 // Export all functions
 export {

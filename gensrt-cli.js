@@ -30,8 +30,8 @@ if (!inputPath || !modelName) {
 let model;
 try {
   model = getModel(modelName);
-} catch (err) {
-  console.error(chalk.red(err.message));
+} catch (error) {
+  console.error(chalk.red(error.message));
   process.exit(1);
 }
 
@@ -360,15 +360,15 @@ const processFile = async (inputFile) => {
       }
     });
 
-    ffmpeg.on("error", (err) => {
+    ffmpeg.on("error", (error) => {
       progressBar.stop();
       safeFree(vad);
       safeFree(recognizer);
       safeFree(buffer);
       console.error(
-        chalk.red(`\n❌ FFmpeg spawn error for ${filename}: ${err.message}`),
+        chalk.red(`\n❌ FFmpeg spawn error for ${filename}: ${error.message}`),
       );
-      reject(err);
+      reject(error);
     });
   });
 };
@@ -393,6 +393,14 @@ const main = async () => {
     for (const file of filesToProcess) {
       try {
         await processFile(file);
+        
+        // Force garbage collection after each file if available
+        if (global.gc) {
+          global.gc();
+        }
+        
+        // Add a small delay between files to allow for resource cleanup
+        await new Promise(resolve => setTimeout(resolve, 100));
       } catch (error) {
         console.error(
           chalk.yellow(
@@ -405,7 +413,8 @@ const main = async () => {
     const totalTime = (Date.now() - startTime) / 1000;
     console.log(
       chalk.green(
-        `\n🎉 All processing complete! Total time: ${totalTime.toFixed(2)}s`,
+        `
+🎉 All processing complete! Total time: ${totalTime.toFixed(2)}s`,
       ),
     );
   } catch (error) {

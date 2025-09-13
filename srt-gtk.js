@@ -117,7 +117,9 @@ async function translateFile(filePath, sourceLang, tgtLang, index, total) {
 
   // Save translated SRT files directly to /sdcard/Download directory
   // Sanitize and truncate filename to prevent issues with long filenames or special characters
-  let safeBaseName = baseName.replace(/[<>"\/|?*\x00-\x1f]/g, "_"); // Replace problematic ASCII characters
+  let safeBaseName = baseName.replace(/[\x00-\x1f"*<>?|]/g, "_"); // Replace problematic ASCII characters
+  // Remove null bytes and control chars separately
+  safeBaseName = safeBaseName.replace(/[\x00-\x1f]/g, "");
   // Truncate to a safe length while preserving Unicode characters
   if (Buffer.byteLength(safeBaseName, "utf8") > 150) {
     // Gradually trim the string to fit within the byte limit

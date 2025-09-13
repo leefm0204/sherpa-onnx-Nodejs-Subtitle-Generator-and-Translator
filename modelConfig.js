@@ -13,7 +13,7 @@ const MODELS = {
             useInverseTextNormalization: 1,
           },
           tokens: path.join(cfg.modelDir, "tokens.txt"),
-          numThreads: 2, // Reduced from 4 to 2 threads to decrease CPU usage
+          numThreads: 2, // Reduced from 4 to 2 threads to decrease CPU usage and prevent speed degradation
           provider: "cpu",
           debug: false,
         },
@@ -33,7 +33,7 @@ const MODELS = {
             useInverseTextNormalization: 1,
           },
           tokens: path.join(cfg.modelDir, "tokens.txt"),
-          numThreads: 2, // Reduced from 4 to 2 threads to decrease CPU usage
+          numThreads: 2, // Reduced from 4 to 2 threads to decrease CPU usage and prevent speed degradation
           provider: "cpu",
           debug: false,
         },
@@ -60,7 +60,7 @@ const MODELS = {
             useInverseTextNormalization: 1,
           },
           tokens: path.join(cfg.modelDir, "tokens.txt"),
-          numThreads: 2, // Reduced from 4 to 2 threads to decrease CPU usage
+          numThreads: 2, // Reduced from 4 to 2 threads to decrease CPU usage and prevent speed degradation
           provider: "cpu",
           debug: false,
         },
