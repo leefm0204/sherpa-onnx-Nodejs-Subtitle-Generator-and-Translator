@@ -1,6 +1,7 @@
 # Nodejs Sherpa-Onnx Subtitle Generator & Translator
 
-![Screenshot_20250825_181855_com kiwibrowser browser](https://github.com/user-attachments/assets/f4711c6c-5286-4d8b-bb08-b62b340b2fc9)
+![Screenshot_20250915_023943_com kiwibrowser browser_edit_12074427967945](https://github.com/user-attachments/assets/d1edc159-0914-4046-a016-b0110e014c3b)
+
 
 Generate and translate subtitles using Sherpa-Onnx node-addon-api that are 2 to 3 times faster than using python and translate subtitle using Google Translate.
 
