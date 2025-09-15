@@ -48,7 +48,7 @@ const MODELS = {
         featConfig: { sampleRate: cfg.sampleRate, featureDim: cfg.featDim },
         modelConfig: {
           transducer: {
-            encodsamplenodejsapp/er: path.join(
+            encoder: path.join(
               cfg.modelDir,
               "encoder-epoch-99-avg-1.int8.onnx",
             ),
