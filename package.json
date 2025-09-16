@@ -4,10 +4,10 @@
   "description": "backed ui for audio/video transcription server using Sherpa-ONNX",
   "main": "server.js",
   "scripts": {
-    "start": "LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-arm64:$LD_LIBRARY_PATH node --expose-gc server.js",
-    "start:debug": "LOG_LEVEL=DEBUG LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-arm64:$LD_LIBRARY_PATH node --expose-gc server.js",
-    "cli": "LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-arm64:$LD_LIBRARY_PATH node gensrt.js",
-    "dev": "LOG_LEVEL=DEBUG LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-arm64:$LD_LIBRARY_PATH nodemon --expose-gc server.js",
+    "start": "LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-x64:$LD_LIBRARY_PATH node --expose-gc server.js",
+    "start:debug": "LOG_LEVEL=DEBUG LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-x64:$LD_LIBRARY_PATH node --expose-gc server.js",
+    "cli": "LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-x64:$LD_LIBRARY_PATH node gensrt.js",
+    "dev": "LOG_LEVEL=DEBUG LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-x64:$LD_LIBRARY_PATH nodemon --expose-gc server.js",
     "lint": "eslint .",
     "lint:html": "eslint index.html",
     "lint:fix": "eslint . --fix"
@@ -34,7 +34,7 @@
     "express": "^5.1.0",
     "lru-cache": "^11.1.0",
     "multer": "^2.0.2",
-    "sherpa-onnx-linux-arm64": "^1.12.9",
+    "sherpa-onnx-linux-x64": "^1.12.9",
     "sherpa-onnx-node": "^1.12.9",
     "ws": "^8.16.0"
   },

@@ -43,7 +43,7 @@ Generate and translate subtitles using Sherpa-Onnx node-addon-api that are 2 to 
 Export LD_LIBRARY_PATH based on your architecture, for example:
 
 ```bash
-export LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-arm64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-x64:$LD_LIBRARY_PATH
 ```
 for use with commandline
 
