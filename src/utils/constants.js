@@ -1,4 +1,6 @@
 // src/utils/constants.js - Centralized configuration constants
+import os from 'os';
+
 export const CONFIG = {
   // Server configuration
   SERVER: {
@@ -13,7 +15,7 @@ export const CONFIG = {
     SAMPLE_RATE: 16000,
     FEAT_DIM: 80,
     BUFFER_SIZE_SECONDS: 5,
-    MAX_CONCURRENT: Math.max(1, require('os').cpus().length - 1),
+    MAX_CONCURRENT: Math.max(1, os.cpus().length - 1),
   },
 
   // VAD configuration
