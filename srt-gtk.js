@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import https from "node:https";
 import { URLSearchParams } from "node:url";
+import Logger from "./logger.js";
 
 const CHUNK_SZ = 1000;
 const REQ_GAP = 1200;
@@ -117,7 +118,9 @@ async function translateFile(filePath, sourceLang, tgtLang, index, total) {
 
   // Save translated SRT files directly to /sdcard/Download directory
   // Sanitize and truncate filename to prevent issues with long filenames or special characters
-  let safeBaseName = baseName.replace(/[<>"\/|?*\x00-\x1f]/g, "_"); // Replace problematic ASCII characters
+  let safeBaseName = baseName.replace(/[\x00-\x1f"*<>?|]/g, "_"); // Replace problematic ASCII characters
+  // Remove null bytes and control chars separately
+  safeBaseName = safeBaseName.replace(/[\x00-\x1f]/g, "");
   // Truncate to a safe length while preserving Unicode characters
   if (Buffer.byteLength(safeBaseName, "utf8") > 150) {
     // Gradually trim the string to fit within the byte limit
@@ -139,15 +142,13 @@ async function translateFile(filePath, sourceLang, tgtLang, index, total) {
 
   try {
     await fs.access(outFile);
-    console.log(
-      `(${index}/${total}) ⏭ Skipped: ${path.basename(outFile)} (already exists)`,
-    );
+    Logger.processComplete("TRANSLATE", `${path.basename(outFile)} (already exists)`, `(${index}/${total}) Skipped`);
     return { skipped: true };
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
 
-  console.log(`(${index}/${total}) 📄 Translating: ${path.basename(filePath)}`);
+  Logger.processStart("TRANSLATE", `${path.basename(filePath)}`, `(${index}/${total}) Translating`);
   const entries = await parseSrt(filePath);
   let index_ = 0;
   while (index_ < entries.length) {
@@ -169,7 +170,7 @@ async function translateFile(filePath, sourceLang, tgtLang, index, total) {
         if (indices[k] !== undefined) entries[indices[k]].text = lines[k];
       }
     } catch (error) {
-      console.error(`⚠️  ${error}`);
+      Logger.error('TRANSLATE', `⚠️  ${error}`);
     }
 
     await sleep(REQ_GAP);
@@ -178,9 +179,9 @@ async function translateFile(filePath, sourceLang, tgtLang, index, total) {
   try {
     await fs.writeFile(outFile, buildSrt(entries), "utf8");
     await saveCache(cache);
-    console.log(`✅ Saved: ${path.basename(outFile)}`);
+    Logger.success('TRANSLATE', `✅ Saved: ${path.basename(outFile)}`);
   } catch (error) {
-    console.error(`❌ Failed to write ${outFile}:`, error.message);
+    Logger.error('TRANSLATE', `❌ Failed to write ${outFile}:`, error.message);
     throw error;
   }
 
@@ -189,14 +190,10 @@ async function translateFile(filePath, sourceLang, tgtLang, index, total) {
 async function main() {
   const [, , pathArgument, sourceLang, tgtLang] = process.argv;
 
-  console.log(
-    `Starting translation with path: ${pathArgument}, source: ${sourceLang}, target: ${tgtLang}`,
-  );
+  Logger.log('TRANSLATE', `Starting translation with path: ${pathArgument}, source: ${sourceLang}, target: ${tgtLang}`);
 
   if (!pathArgument || !sourceLang || !tgtLang) {
-    console.error(
-      "❌ Usage: node srt-gtk.js /path/to/file/or/folder sourceLang targetLang",
-    );
+    Logger.error('TRANSLATE', "❌ Usage: node srt-gtk.js /path/to/file/or/folder sourceLang targetLang");
     process.exit(1);
   }
 
@@ -210,18 +207,16 @@ async function main() {
     } else if (stats.isFile() && pathArgument.toLowerCase().endsWith(".srt")) {
       files = [pathArgument];
     } else {
-      console.error(
-        "❌ Invalid path. Must be a .srt file or directory containing .srt files.",
-      );
+      Logger.error('TRANSLATE', "❌ Invalid path. Must be a .srt file or directory containing .srt files.");
       process.exit(1);
     }
   } catch (error) {
-    console.error("❌ Error accessing path:", error.message);
+    Logger.error('TRANSLATE', "❌ Error accessing path:", error.message);
     process.exit(1);
   }
 
   if (files.length === 0) {
-    console.error("❌ No .srt files found.");
+    Logger.error('TRANSLATE', "❌ No .srt files found.");
     process.exit(1);
   }
 
@@ -232,7 +227,7 @@ async function main() {
   // Handle cancellation signals
   const signalHandler = () => {
     cancelled = true;
-    console.log("\n[INFO] Translation process cancelled by user");
+    Logger.log('TRANSLATE', "[INFO] Translation process cancelled by user");
     process.exit(0);
   };
 
@@ -242,7 +237,7 @@ async function main() {
   for (const file of files) {
     // Check if cancelled before processing each file
     if (cancelled) {
-      console.log(`[INFO] Skipping ${path.basename(file)} due to cancellation`);
+      Logger.log('TRANSLATE', `[INFO] Skipping ${path.basename(file)} due to cancellation`);
       continue;
     }
 
@@ -250,20 +245,17 @@ async function main() {
     try {
       await translateFile(file, sourceLang, tgtLang, index, total);
     } catch (error) {
-      console.error(
-        `❌ Failed to translate ${path.basename(file)}:`,
-        error.message,
-      );
+      Logger.error('TRANSLATE', `❌ Failed to translate ${path.basename(file)}:`, error.message);
     }
 
     // If cancelled during processing, exit
     if (cancelled) {
-      console.log("[INFO] Process cancelled during file translation");
+      Logger.log('TRANSLATE', "[INFO] Process cancelled during file translation");
       break;
     }
   }
 
-  console.log("\n🎉 All done!");
+  Logger.success('TRANSLATE', "\n🎉 All done!");
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

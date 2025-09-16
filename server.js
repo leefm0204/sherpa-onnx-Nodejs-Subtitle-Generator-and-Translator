@@ -7,14 +7,15 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { WebSocketServer } from 'ws';
 
-import { uploadSingleFile, cleanupUploadedFiles } from './fileupload.js';
+import { uploadSingleFile, cleanupUploadedFiles, startPeriodicCleanup, performGC } from './fileupload.js';
 import { getCachedSystemInfo, clearFileCache } from './cache-optimization.js';
+import Logger from './logger.js';
 
 // Enable explicit garbage collection
 if (global.gc) {
-  console.log('Garbage collection is enabled');
+  Logger.log('SERVER', 'Garbage collection is enabled');
 } else {
-  console.warn('Garbage collection is not enabled. Start with --expose-gc flag for better memory management');
+  Logger.warn('SERVER', 'Garbage collection is not enabled. Start with --expose-gc flag for better memory management');
 }
 
 // active process refs - changed to support multiple processes
@@ -56,7 +57,7 @@ app.post('/api/upload', uploadSingleFile('file'), async (request, res) => {
   try {
     // Track uploaded file for cleanup (use resolved path for consistency)
     uploadedFiles.add(path.resolve(request.file.path));
-    console.log('File uploaded:', request.file);
+    Logger.log('UPLOAD', 'File uploaded:', request.file);
     
     // Immediately start transcription for the uploaded file
     const filePath = request.file.path;
@@ -97,7 +98,7 @@ app.post('/api/upload', uploadSingleFile('file'), async (request, res) => {
           }
         });
         
-        console.log('Spawned transcriber pid=', transcriber.pid);
+        Logger.log('TRANSCRIBE', `Spawned transcriber pid=${transcriber.pid}`);
         activeTranscriptionProcesses.set(transcriber.pid, transcriber);
         
         let finalSrtPath = null;
@@ -107,15 +108,18 @@ app.post('/api/upload', uploadSingleFile('file'), async (request, res) => {
         let lastProgress = -1;
         
         // Add error event listener to prevent process crashes
-        transcriber.on('error', (error) => {
-          console.error('Transcriber process error for', filename, error);
+        transcriber.on('error', (_error) => {
+          Logger.error('TRANSCRIBE', `Transcriber process error for file: ${filename}`, _error);
           const index = transcriptionState.filesList.findIndex(x => x.name === filename);
           if (index !== -1) transcriptionState.filesList[index].status = 'error';
           broadcast({ type: 'state_update', state: transcriptionState });
-          broadcast({ type: 'file_error', filename, error: `Failed to start transcriber: ${error.message}` });
+          broadcast({ type: 'file_error', filename, error: `Failed to start transcriber: ${_error.message}` });
           if (activeTranscriptionProcesses.has(transcriber.pid)) {
             activeTranscriptionProcesses.delete(transcriber.pid);
           }
+          
+          // Force garbage collection after process completion (even on error)
+          performGC();
         });
         
         if (transcriber.stdout) {
@@ -148,13 +152,14 @@ app.post('/api/upload', uploadSingleFile('file'), async (request, res) => {
               }
             } else {
                 const m1 = s.match(/SRT file saved to:\s*(.+)/);
-                const m2 = s.match(/\[DONE\]\s*Done!\s*Output:\s*(.+)/);
+                const m2 = s.match(/\[DONE]\s*Done!\s*Output:\s*(.+)/);
                 if (m1 || m2) {
                     const p = (m1 ? m1[1] : m2[1]).trim();
                     try {
                         finalSrtPath = path.resolve(p);
-                        console.log('Detected transcriber output SRT path:', finalSrtPath);
-                    } catch (e) {
+                        Logger.log('TRANSCRIBE', `Detected transcriber output SRT path: ${finalSrtPath}`);
+                    } catch (error) {
+                      Logger.warn('TRANSCRIBE', "Failed to resolve SRT path", error.message);
                         // ignore parse errors, keep existing finalSrtPath
                     }
                 }
@@ -163,7 +168,7 @@ app.post('/api/upload', uploadSingleFile('file'), async (request, res) => {
           
           // Handle stdout error events
           transcriber.stdout.on('error', (error) => {
-            console.error('Transcriber stdout error for', filename, error);
+            Logger.error('TRANSCRIBE', `Transcriber stdout error for ${filename}`, error);
           });
         }
         
@@ -174,13 +179,13 @@ app.post('/api/upload', uploadSingleFile('file'), async (request, res) => {
           
           // Handle stderr error events
           transcriber.stderr.on('error', (error) => {
-            console.error('Transcriber stderr error for', filename, error);
+            Logger.error('TRANSCRIBE', `Transcriber stderr error for ${filename}`, error);
           });
         }
         
         // wait for completion
         transcriber.on('close', (code, signal) => {
-          console.log(`Transcriber closed for ${filename} code=${code} signal=${signal}`);
+          Logger.log('TRANSCRIBE', `Transcriber closed for ${filename} code=${code} signal=${signal}`);
           const index = transcriptionState.filesList.findIndex(x => x.name === filename);
           if (code === 0) {
             if (index !== -1) transcriptionState.filesList[index].status = 'completed';
@@ -202,23 +207,29 @@ app.post('/api/upload', uploadSingleFile('file'), async (request, res) => {
             uploadedFiles.delete(filePath);
             // Call cleanup function to delete the actual file
             cleanupUploadedFiles([filePath]).catch(error => {
-              console.warn(`Failed to clean up uploaded file ${filePath}:`, error.message);
+              Logger.warn('UPLOAD', `Failed to clean up uploaded file ${filePath}: ${error.message}`);
             });
           }
+          
+          // Force garbage collection after cleanup if available
+          performGC();
         });
         
-        transcriber.on('error', (error) => {
-          console.error('Transcriber start error for', filename, error);
+        transcriber.on('error', (_error) => {
+          Logger.error('TRANSCRIBE', `Transcriber start error for ${filename}`, _error);
           const index_ = transcriptionState.filesList.findIndex(x => x.name === filename);
           if (index_ !== -1) transcriptionState.filesList[index_].status = 'error';
           broadcast({ type: 'state_update', state: transcriptionState });
-          broadcast({ type: 'file_error', filename, error: `Failed to start transcriber: ${error.message}` });
+          broadcast({ type: 'file_error', filename, error: `Failed to start transcriber: ${_error.message}` });
           if (activeTranscriptionProcesses.has(transcriber.pid)) {
             activeTranscriptionProcesses.delete(transcriber.pid);
           }
+          
+          // Force garbage collection after process completion (even on error)
+          performGC();
         });
       } catch (error) {
-        console.error('Error starting transcription for uploaded file:', error);
+        Logger.error('UPLOAD', 'Error starting transcription for uploaded file', error);
         const index = transcriptionState.filesList.findIndex(x => x.name === filename);
         if (index !== -1) transcriptionState.filesList[index].status = 'error';
         broadcast({ type: 'state_update', state: transcriptionState });
@@ -226,7 +237,7 @@ app.post('/api/upload', uploadSingleFile('file'), async (request, res) => {
       }
     }, 100); // Small delay to ensure response is sent first
   } catch (error) {
-    console.error('Error processing uploaded file:', error);
+    Logger.error('UPLOAD', 'Error processing uploaded file', error);
     res.status(500).json({ error: 'Failed to process uploaded file' });
   }
 });
@@ -245,7 +256,7 @@ app.post('/api/upload-srt', uploadSingleFile('file'), async (request, res) => {
   try {
     // Track uploaded file for cleanup (use resolved path for consistency)
     uploadedFiles.add(path.resolve(request.file.path));
-    console.log('SRT file uploaded:', request.file);
+    Logger.log('UPLOAD', 'SRT file uploaded:', request.file);
     
     // Immediately start translation for the uploaded SRT file
     const filePath = request.file.path;
@@ -274,7 +285,7 @@ app.post('/api/upload-srt', uploadSingleFile('file'), async (request, res) => {
         logMemoryUsage(`Starting translation for ${filename}`);
         
         const translatorPath = path.join(__dirname, 'srt-gtk.js');
-        console.log(`Starting translator for ${filename}`);
+        Logger.log('TRANSLATE', `Starting translation process for file: ${filename}`);
         const translator = spawnDetached('node', [translatorPath, filePath, 'auto', 'en'], {
           cwd: process.cwd(),
           env: {
@@ -283,7 +294,7 @@ app.post('/api/upload-srt', uploadSingleFile('file'), async (request, res) => {
           }
         });
         
-        console.log('Spawned translator pid=', translator.pid);
+        Logger.log('TRANSLATE', `Spawned translator pid=${translator.pid}`);
         activeTranslationProcesses.set(translator.pid, translator);
         
         let translatedSrtPath = null;
@@ -306,7 +317,7 @@ app.post('/api/upload-srt', uploadSingleFile('file'), async (request, res) => {
         if (translator.stderr) translator.stderr.on('data', d => broadcast({ type: 'debug_output', output: d.toString() }));
         
         translator.on('close', (code, signal) => {
-          console.log(`Translator closed for ${filename} code=${code} signal=${signal}`);
+          Logger.log('TRANSLATE', `Translator closed for ${filename} code=${code} signal=${signal}`);
           const index = translationState.translationQueue.findIndex(x => x.filename === filename);
           if (code === 0) {
             if (index !== -1) translationState.translationQueue[index].status = 'completed';
@@ -318,7 +329,7 @@ app.post('/api/upload-srt', uploadSingleFile('file'), async (request, res) => {
               // If no translated SRT path was captured, construct it properly
               const baseName = path.basename(filePath, path.extname(filePath));
               // Sanitize filename to prevent issues
-              const safeBaseName = baseName.replace(/[<>:"\/\\|?*\x00-\x1f]/g, '_');
+              const safeBaseName = baseName.replace(/[\x00-\x1f"*/:<>?\\|]/g, '_');
               // Determine output path based on whether file is uploaded
               const isUploadedFile = uploadedFiles.has(path.resolve(filePath));
               const finalTranslatedPath = (filePath.startsWith('/tmp/') || isUploadedFile)
@@ -340,13 +351,13 @@ app.post('/api/upload-srt', uploadSingleFile('file'), async (request, res) => {
             uploadedFiles.delete(filePath);
             // Call cleanup function to delete the actual file
             cleanupUploadedFiles([filePath]).catch(error => {
-              console.warn(`Failed to clean up uploaded file ${filePath}:`, error.message);
+              Logger.warn('UPLOAD', `Failed to clean up uploaded file ${filePath}: ${error.message}`);
             });
           }
         });
         
         translator.on('error', (error) => {
-          console.error('Translation process error for', filename, error);
+          Logger.error('TRANSLATE', `Translation process error for ${filename}`, error);
           const index_ = translationState.translationQueue.findIndex(x => x.filename === filename);
           if (index_ !== -1) translationState.translationQueue[index_].status = 'error';
           broadcast({ type: 'translation_state', state: translationState });
@@ -360,12 +371,15 @@ app.post('/api/upload-srt', uploadSingleFile('file'), async (request, res) => {
             uploadedFiles.delete(filePath);
             // Call cleanup function to delete the actual file
             cleanupUploadedFiles([filePath]).catch(error => {
-              console.warn(`Failed to clean up uploaded file ${filePath}:`, error.message);
+              Logger.warn('UPLOAD', `Failed to clean up uploaded file ${filePath}: ${error.message}`);
             });
           }
+          
+          // Force garbage collection after cleanup if available
+          performGC();
         });
       } catch (error) {
-        console.error('Error starting translation for uploaded SRT file:', error);
+        Logger.error('UPLOAD', 'Error starting translation for uploaded SRT file', error);
         const index = translationState.translationQueue.findIndex(x => x.filename === filename);
         if (index !== -1) translationState.translationQueue[index].status = 'error';
         broadcast({ type: 'translation_state', state: translationState });
@@ -373,14 +387,17 @@ app.post('/api/upload-srt', uploadSingleFile('file'), async (request, res) => {
       }
     }, 100); // Small delay to ensure response is sent first
   } catch (error) {
-    console.error('Error processing uploaded SRT file:', error);
+    Logger.error('UPLOAD', 'Error processing uploaded SRT file', error);
     res.status(500).json({ error: 'Failed to process uploaded SRT file' });
   }
 });
 
 // Create HTTP server
+// Start periodic cleanup for file uploads
+startPeriodicCleanup();
+
 const server = app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  Logger.log('SERVER', `Server running at http://localhost:${PORT}`);
   logMemoryUsage('Server started');
 });
 
@@ -444,7 +461,7 @@ function tryKillProcessTree(proc) {
     return false;
   }
   const pid = proc.pid;
-  console.log(`Attempting to kill process tree for pid=${pid} (platform=${process.platform})`);
+  Logger.log('PROCESS', `Attempting to kill process tree for pid=${pid} (platform=${process.platform})`);
 
   if (process.platform === 'win32') {
     // On Windows use taskkill to kill the PID tree
@@ -453,12 +470,12 @@ function tryKillProcessTree(proc) {
       spawn('taskkill', ['/PID', String(pid), '/T', '/F'], { detached: true, stdio: 'ignore', shell: false }).unref();
       return true;
     } catch (error) {
-      console.error('taskkill failed:', error);
+      Logger.error('PROCESS', 'Failed to kill process with taskkill command', error);
       try {
         proc.kill('SIGKILL');
         return true;
       } catch (error) {
-        console.error('Fallback kill failed:', error);
+        Logger.error('PROCESS', 'Fallback kill command also failed', error);
         return false;
       }
     }
@@ -505,7 +522,7 @@ function logMemoryUsage(label) {
       heapUsed: Math.round(used.heapUsed / 1024 / 1024 * 100) / 100, // MB
       external: Math.round(used.external / 1024 / 1024 * 100) / 100 // MB
     };
-    console.log(`${label} - Memory Usage:`, usage);
+    Logger.log('MEMORY', `${label} - Memory Usage:`, usage);
   }
 }
 
@@ -593,7 +610,7 @@ app.post('/api/start', async (request, res) => {
         }
       });
 
-      console.log('Spawned transcriber pid=', transcriber.pid);
+      Logger.log('TRANSCRIBE', `Spawned transcriber pid=${transcriber.pid}`);
       activeTranscriptionProcesses.set(transcriber.pid, transcriber);
 
       // keep a mutable final path that we can update if transcriber prints the real path
@@ -605,7 +622,7 @@ app.post('/api/start', async (request, res) => {
       
       // Add error event listener to prevent process crashes
       transcriber.on('error', (error) => {
-        console.error('Transcriber process error for', filename, error);
+        Logger.error('TRANSCRIBE', `Transcriber process error for ${filename}`, error);
         const index = transcriptionState.filesList.findIndex(x => x.name === filename);
         if (index !== -1) transcriptionState.filesList[index].status = 'error';
         broadcast({ type: 'state_update', state: transcriptionState });
@@ -613,6 +630,9 @@ app.post('/api/start', async (request, res) => {
         if (activeTranscriptionProcesses.has(transcriber.pid)) {
           activeTranscriptionProcesses.delete(transcriber.pid);
         }
+        
+        // Force garbage collection after process completion (even on error)
+        performGC();
       });
       
       if (transcriber.stdout) {
@@ -644,8 +664,8 @@ app.post('/api/start', async (request, res) => {
                 broadcast({ type: 'transcription_progress', filename, progress, processed, duration: total, elapsed, remaining, speed });
                 
                 // Periodic garbage collection during long processes
-                if (progress % 10 === 0 && global.gc) {
-                  global.gc();
+                if (progress % 10 === 0) {
+                  performGC();
                 }
               }
             }
@@ -654,21 +674,21 @@ app.post('/api/start', async (request, res) => {
           // NEW: parse the actual saved path output from gensrt.js
           // gensrt.js prints: "SRT file saved to: <path>" and also "[DONE] Done! Output: <path>"
           const m1 = s.match(/SRT file saved to:\s*(.+)/);
-          const m2 = s.match(/\[DONE\]\s*Done!\s*Output:\s*(.+)/);
+          const m2 = s.match(/\[DONE]\s*Done!\s*Output:\s*(.+)/);
           if (m1 || m2) {
             const p = (m1 ? m1[1] : m2[1]).trim();
             try {
               finalSrtPath = path.resolve(p);
-              console.log('Detected transcriber output SRT path:', finalSrtPath);
-            } catch (e) {
-              // ignore parse errors, keep existing finalSrtPath
+              Logger.log('TRANSCRIBE', `Detected transcriber output SRT path: ${finalSrtPath}`);
+            } catch (error) {
+              Logger.warn('TRANSCRIBE', `Failed to resolve transcriber output SRT path: ${error.message}`);
             }
           }
         });
         
         // Handle stdout error events
         transcriber.stdout.on('error', (error) => {
-          console.error('Transcriber stdout error for', filename, error);
+          Logger.error('TRANSCRIBE', `Transcriber stdout error for ${filename}`, error);
         });
       }
       
@@ -679,14 +699,14 @@ app.post('/api/start', async (request, res) => {
         
         // Handle stderr error events
         transcriber.stderr.on('error', (error) => {
-          console.error('Transcriber stderr error for', filename, error);
+          Logger.error('TRANSCRIBE', `Transcriber stderr error for ${filename}`, error);
         });
       }
 
       // wait for completion
       await new Promise((resolve) => {
         const handleClose = (code, signal) => {
-          console.log(`Transcriber closed for ${filename} code=${code} signal=${signal}`);
+          Logger.log('TRANSCRIBE', `Transcriber process finished for file ${filename} with exit code=${code} and signal=${signal}`);
           const index = transcriptionState.filesList.findIndex(x => x.name === filename);
           if (code === 0) {
             if (index !== -1) transcriptionState.filesList[index].status = 'completed';
@@ -694,7 +714,9 @@ app.post('/api/start', async (request, res) => {
             // broadcast the actual final path (updated from stdout when available)
             if (!finalSrtPath) {
                 const baseName = path.basename(file, path.extname(file));
-                const safeBaseName = baseName.replace(/[<>:"\/\\|?*\x00-\x1f]/g, '_');
+                let safeBaseName = baseName.replace(/[\x00-\x1f*:<>?|]/g, '_');
+                // Remove backslashes and quotes separately
+                safeBaseName = safeBaseName.replace(/["\\]/g, '_');
                 finalSrtPath = isUploadedFile || file.startsWith('/tmp/')
                     ? path.join('/sdcard/Download', `${safeBaseName}.srt`)
                     : path.join(path.dirname(file), `${safeBaseName}.srt`);
@@ -715,19 +737,22 @@ app.post('/api/start', async (request, res) => {
             uploadedFiles.delete(file);
             // Call cleanup function to delete the actual file
             cleanupUploadedFiles([file]).catch(error => {
-              console.warn(`Failed to clean up uploaded file ${file}:`, error.message);
+              Logger.warn('UPLOAD', `Failed to clean up uploaded file ${file}: ${error.message}`);
             });
           }
           
           // Explicitly remove listeners to prevent memory leaks
           transcriber.removeListener('close', handleClose);
           transcriber.removeListener('error', handleError);
-                    
+          
+          // Force garbage collection after process completion
+          performGC();
+          
           resolve();
         };
 
         const handleError = (error) => {
-          console.error('Transcriber start error for', filename, error);
+          Logger.error('TRANSCRIBE', `Transcriber start error for ${filename}`, error);
           const index_ = transcriptionState.filesList.findIndex(x => x.name === filename);
           if (index_ !== -1) transcriptionState.filesList[index_].status = 'error';
           broadcast({ type: 'state_update', state: transcriptionState });
@@ -740,12 +765,20 @@ app.post('/api/start', async (request, res) => {
           transcriber.removeListener('close', handleClose);
           transcriber.removeListener('error', handleError);
           
+          // Force garbage collection after process completion (even on error)
+          if (global.gc) {
+            global.gc();
+          }
+          
           resolve();
         };
 
         transcriber.on('close', handleClose);
         transcriber.on('error', handleError);
       });
+      
+      // Add a small delay between processes to allow for resource cleanup
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     // Clean up uploaded files after transcription completes
@@ -754,7 +787,7 @@ app.post('/api/start', async (request, res) => {
     broadcast({ type: 'all_complete', totalTime: 0 });
     res.json({ success: true, message: 'Transcription process started successfully' });
   } catch (error) {
-    console.error('Failed to start transcription:', error);
+    Logger.error('Failed to start transcription:', error);
     broadcast({ type: 'error', message: `Failed to start transcription: ${error.message}` });
     res.status(500).json({ success: false, error: `Failed to start transcription: ${error.message}` });
   }
@@ -801,7 +834,7 @@ app.post('/api/translate', async (request, res) => {
 
       // skip if cleared mid-run
       if (!translationState.translationQueue.find(x => x.filename === filename)) {
-        console.log(`Skipping translation ${filename} (removed from queue)`);
+        Logger.log('TRANSLATE', `Skipping translation for file ${filename} (removed from queue)`);
         continue;
       }
 
@@ -814,7 +847,7 @@ app.post('/api/translate', async (request, res) => {
       broadcast({ type: 'translation_start', filename });
 
       const translatorPath = path.join(__dirname, 'srt-gtk.js');
-      console.log(`Starting translator for ${filename}`);
+              Logger.log('TRANSLATE', `Starting translation process for file: ${filename}`);
       const translator = spawnDetached('node', [translatorPath, file, sourceLang, targetLang], {
         cwd: process.cwd(),
         env: {
@@ -823,7 +856,7 @@ app.post('/api/translate', async (request, res) => {
         }
       });
 
-      console.log('Spawned translator pid=', translator.pid);
+      Logger.log('TRANSLATE', `Spawned translator pid=${translator.pid}`);
       activeTranslationProcesses.set(translator.pid, translator);
 
       let translatedSrtPath = '';
@@ -845,8 +878,8 @@ app.post('/api/translate', async (request, res) => {
           
           // Periodic garbage collection during translation
           progressCounter++;
-          if (progressCounter % 50 === 0 && global.gc) {
-            global.gc();
+          if (progressCounter % 50 === 0) {
+            performGC();
           }
         });
       }
@@ -854,7 +887,7 @@ app.post('/api/translate', async (request, res) => {
 
       await new Promise((resolve) => {
         const handleClose = (code, signal) => {
-          console.log(`Translator closed for ${filename} code=${code} signal=${signal}`);
+          Logger.log('TRANSLATE', `Translator process finished for file ${filename} with exit code=${code} and signal=${signal}`);
           const index = translationState.translationQueue.findIndex(x => x.filename === filename);
           if (code === 0) {
             if (index !== -1) translationState.translationQueue[index].status = 'completed';
@@ -866,7 +899,9 @@ app.post('/api/translate', async (request, res) => {
               // If no translated SRT path was captured, construct it properly
               const baseName = path.basename(file, path.extname(file));
               // Sanitize filename to prevent issues
-              const safeBaseName = baseName.replace(/[<>:"\/\\|?*\x00-\x1f]/g, '_');
+              const safeBaseName = baseName.replace(/[\x00-\x1f*:<>?|]/g, '_');
+              // Remove backslashes and quotes separately
+              safeBaseName.replace(/["\\]/g, '_');
               // Determine output path based on whether file is uploaded
               const finalTranslatedPath = uploadedFiles.has(file) || file.startsWith('/tmp/')
                 ? path.join('/sdcard/Download', `${safeBaseName}-${targetLang}.srt`)
@@ -891,7 +926,7 @@ app.post('/api/translate', async (request, res) => {
         };
 
         const handleError = (error) => {
-          console.error('Translation process error for', filename, error);
+          Logger.error('TRANSLATE', `Translation process error for ${filename}`, error);
           const index_ = translationState.translationQueue.findIndex(x => x.filename === filename);
           if (index_ !== -1) translationState.translationQueue[index_].status = 'error';
           broadcast({ type: 'translation_state', state: translationState });
@@ -904,6 +939,11 @@ app.post('/api/translate', async (request, res) => {
           translator.removeListener('close', handleClose);
           translator.removeListener('error', handleError);
           
+          // Force garbage collection after process completion (even on error)
+          if (global.gc) {
+            global.gc();
+          }
+          
           resolve();
         };
 
@@ -914,7 +954,7 @@ app.post('/api/translate', async (request, res) => {
 
     res.json({ success: true, message: 'Translation started successfully' });
   } catch (error) {
-    console.error('Failed to start translation:', error);
+    Logger.error('Failed to start translation:', error);
     broadcast({ type: 'error', message: `Failed to start translation: ${error.message}` });
     res.status(500).json({ success: false, error: `Failed to start translation: ${error.message}` });
   }
@@ -963,15 +1003,15 @@ function startHeartbeat() {
   heartbeatInterval = setInterval(() => {
     wss.clients.forEach((ws) => {
       if (!ws.isAlive) {
-        console.log('Terminating non-responsive WebSocket connection');
+        Logger.log('[WEBSOCKET] Terminating non-responsive WebSocket connection');
         return ws.terminate();
       }
       
       ws.isAlive = false;
       try {
         ws.ping();
-      } catch (err) {
-        console.error('Error sending ping:', err);
+      } catch (error) {
+        Logger.error('Error sending ping:', error);
       }
     });
   }, HEARTBEAT_INTERVAL);
@@ -989,7 +1029,7 @@ const rateLimit = (ws) => {
   
   // Check rate limit (10 messages per second)
   if (client.messageTimestamps.length >= 10) {
-    console.warn(`Rate limit exceeded for client ${client.id}`);
+    Logger.warn('CLIENT', `Rate limit exceeded for client: ${client.id}`);
     return true;
   }
   
@@ -1001,13 +1041,13 @@ async function handleStopTranscription(ws) {
   const client = clients.get(ws);
   if (!client) return;
   
-  console.log(`[${client.id}] Stopping all transcription processes...`);
+  Logger.log('TRANSCRIBE', `Stopping all transcription processes for client ${client.id}...`);
   cancelAllTranscription = true;
   
   // Kill all active transcription processes
   const killPromises = [];
   for (const [id, process] of activeTranscriptionProcesses.entries()) {
-    console.log(`[${client.id}] Killing transcription process ${id}`);
+    Logger.log('PROCESS', `Killing transcription process ${id} for client ${client.id}`);
     killPromises.push(tryKillProcessTree(process));
     activeTranscriptionProcesses.delete(id);
   }
@@ -1019,20 +1059,20 @@ async function handleStopTranscription(ws) {
   transcriptionState = { filesList: [], isProcessing: false };
   broadcast({ type: MESSAGE_TYPES.STATE_UPDATE, state: transcriptionState });
   
-  console.log(`[${client.id}] All transcription processes stopped`);
+  Logger.log('TRANSCRIBE', `All transcription processes stopped for client ${client.id}`);
 }
 
 async function handleStopTranslation(ws) {
   const client = clients.get(ws);
   if (!client) return;
   
-  console.log(`[${client.id}] Stopping all translation processes...`);
+  Logger.log('TRANSLATE', `Stopping all translation processes for client ${client.id}...`);
   cancelAllTranslation = true;
   
   // Kill all active translation processes
   const killPromises = [];
   for (const [id, process] of activeTranslationProcesses.entries()) {
-    console.log(`[${client.id}] Killing translation process ${id}`);
+    Logger.log('PROCESS', `Killing translation process ${id} for client ${client.id}`);
     killPromises.push(tryKillProcessTree(process));
     activeTranslationProcesses.delete(id);
   }
@@ -1044,11 +1084,11 @@ async function handleStopTranslation(ws) {
   translationState = { translationQueue: [], isProcessing: false };
   broadcast({ type: MESSAGE_TYPES.TRANSLATION_STATE, state: translationState });
   
-  console.log(`[${client.id}] All translation processes stopped`);
+  Logger.log('TRANSLATE', `All translation processes stopped for client ${client.id}`);
 }
 
 function cleanupClientResources(clientId) {
-  console.log(`Cleaning up resources for client ${clientId}`);
+  Logger.log('CLIENT', `Cleaning up resources for client ${clientId}`);
   // Add any client-specific cleanup here
 }
 
@@ -1057,7 +1097,7 @@ wss.on('connection', (ws, req) => {
   const clientId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const clientIp = req.socket.remoteAddress;
   
-  console.log(`New WebSocket connection from ${clientIp} (${clientId})`);
+  Logger.log('WEBSOCKET', `New WebSocket connection from ${clientIp} (${clientId})`);
   
   // Initialize client state
   const client = {
@@ -1091,9 +1131,9 @@ wss.on('connection', (ws, req) => {
       state: translationState
     }));
     
-    console.log(`Sent initial states to client ${clientId}`);
-  } catch (err) {
-    console.error(`Error sending initial states to client ${clientId}:`, err);
+    Logger.log(`Sent initial states to client ${clientId}`);
+  } catch (error) {
+    Logger.error('WEBSOCKET', `Error sending initial states to client ${clientId}`, error);
   }
   
   // Handle incoming messages
@@ -1139,18 +1179,18 @@ wss.on('connection', (ws, req) => {
       
       // Log message processing start for performance monitoring
       const messageType = message.type;
-      console.debug(`[${clientId}] Processing message type: ${messageType}`);
+      Logger.debug('WEBSOCKET', `Processing message type: ${messageType} from client ${clientId}`);
       
       // Route message to appropriate handler
       switch (messageType) {
         case 'stop_process': // Legacy support
         case 'stop_transcription':
-          console.log(`[${clientId}] Received ${message.type} command`);
+          Logger.log('WEBSOCKET', `Received ${message.type} command from client ${clientId}`);
           await handleStopTranscription(ws);
           break;
           
         case 'stop_translation':
-          console.log(`[${clientId}] Received stop_translation command`);
+          Logger.log('WEBSOCKET', `Received stop_translation command from client ${clientId}`);
           await handleStopTranslation(ws);
           break;
           
@@ -1159,7 +1199,7 @@ wss.on('connection', (ws, req) => {
           break;
           
         case 'clear_translation':
-          console.log(`[${clientId}] Clearing translation queue`);
+          Logger.log('TRANSLATE', `Clearing translation queue for client ${clientId}`);
           translationState.translationQueue = [];
           cancelAllTranslation = false;
           cancelTranslation = false;
@@ -1169,7 +1209,7 @@ wss.on('connection', (ws, req) => {
           
         case 'clear_files':
         case 'clear_file_list':
-          console.log(`[${clientId}] Clearing file list`);
+          Logger.log('UPLOAD', `Clearing file list for client ${clientId}`);
           transcriptionState.filesList = [];
           cancelAllTranscription = false;
           cancelTranscription = false;
@@ -1203,7 +1243,7 @@ wss.on('connection', (ws, req) => {
           break;
           
         default:
-          console.warn(`[${clientId}] Unknown message type: ${message.type}`);
+          Logger.warn('WEBSOCKET', `Unknown message type: ${message.type} from client ${clientId}`);
           ws.send(JSON.stringify({
             type: MESSAGE_TYPES.ERROR,
             code: 'UNKNOWN_MESSAGE_TYPE',
@@ -1220,7 +1260,7 @@ wss.on('connection', (ws, req) => {
       };
       
       // Log the error with context
-      console.error(`[${clientId}] Error processing message:`, {
+      Logger.error('WEBSOCKET', `Error processing message from client ${clientId}`, {
         error: error.message,
         stack: error.stack,
         messageType: message?.type,
@@ -1233,13 +1273,13 @@ wss.on('connection', (ws, req) => {
           ws.send(JSON.stringify(errorDetails));
         }
       } catch (sendError) {
-        console.error(`[${clientId}] Failed to send error response:`, sendError);
+        Logger.error('WEBSOCKET', `Failed to send error response to client ${clientId}`, sendError);
       }
       
       // Log performance metrics
       const [seconds, nanoseconds] = process.hrtime(startTime);
       const durationMs = (seconds * 1000) + (nanoseconds / 1000000);
-      console.debug(`[${clientId}] Message processed in ${durationMs.toFixed(2)}ms (error)`);
+      Logger.debug(`[${clientId}] Message processed in ${durationMs.toFixed(2)}ms (error)`);
     }
   });
   
@@ -1253,7 +1293,7 @@ wss.on('connection', (ws, req) => {
       timestamp: new Date().toISOString()
     };
     
-    console.log(`[${clientId}] WebSocket connection closed:`, closeInfo);
+    Logger.log('WEBSOCKET', `WebSocket connection closed for client ${clientId}`, closeInfo);
     
     // Clean up resources
     if (clients.has(ws)) {
@@ -1274,7 +1314,7 @@ wss.on('connection', (ws, req) => {
       timestamp: new Date().toISOString()
     };
     
-    console.error(`[${clientId}] WebSocket error:`, errorInfo);
+    Logger.error('WEBSOCKET', `WebSocket error for client ${clientId}`, errorInfo);
     
     // Clean up resources
     if (clients.has(ws)) {
@@ -1288,7 +1328,7 @@ wss.on('connection', (ws, req) => {
         ws.close(1011, 'Internal server error');
       }
     } catch (closeError) {
-      console.error(`[${clientId}] Error closing WebSocket:`, closeError);
+      Logger.error(`[${clientId}] Error closing WebSocket:`, closeError);
     }
   });
 });
@@ -1297,16 +1337,16 @@ wss.on('connection', (ws, req) => {
 startHeartbeat();
 
 process.on('SIGINT', async () => {
-  console.log('Received SIGINT. Shutting down gracefully...');
+  Logger.log('SERVER', 'Received SIGINT. Shutting down gracefully...');
   // Kill all active transcription processes
   for (const [id, process] of activeTranscriptionProcesses.entries()) {
-    console.log(`Killing transcription process ${id}`);
+    Logger.log('PROCESS', `Killing transcription process ${id}`);
     tryKillProcessTree(process);
   }
   
   // Kill all active translation processes
   for (const [id, process] of activeTranslationProcesses.entries()) {
-    console.log(`Killing translation process ${id}`);
+    Logger.log('PROCESS', `Killing translation process ${id}`);
     tryKillProcessTree(process);
   }
   
@@ -1318,20 +1358,20 @@ process.on('SIGINT', async () => {
   // Clear file cache
   try {
     await clearFileCache();
-    console.log('File cache cleared.');
+    Logger.log('CACHE', 'File cache cleared.');
   } catch (error) {
-    console.warn('Failed to clear file cache:', error.message);
+    Logger.warn('CACHE', 'Failed to clear file cache', error.message);
   }
   
   // Close server
   server.close(() => {
-    console.log('Server closed.');
+    Logger.log('SERVER', 'Server closed.');
     process.exit(0);
   });
   
   // Force exit after 5 seconds if server hasn't closed
   setTimeout(() => {
-    console.log('Forcing process exit.');
+    Logger.log('SERVER', 'Forcing process exit.');
     process.exit(0);
   }, 5000);
 });

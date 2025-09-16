@@ -1284,7 +1284,10 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+    // Import the unified logger
+    import Logger from './logger.js';
+
     document.addEventListener('DOMContentLoaded', () => {
       const fileList = document.getElementById('fileList');
       const emptyState = document.getElementById('emptyState');
@@ -1310,13 +1313,13 @@
       function connectWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}`;
-        console.log('Attempting WebSocket connection to:', wsUrl);
+        Logger.log('WEBSOCKET', 'Attempting WebSocket connection to:', wsUrl);
     
         // Create new socket each time
         ws = new WebSocket(wsUrl);
     
         ws.onopen = () => {
-          console.log('WebSocket connected');
+          Logger.log('WEBSOCKET', 'WebSocket connected');
           // Ask server for current states
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'request_state' }));
@@ -1327,24 +1330,24 @@
           try {
             const data = JSON.parse(event.data);
             handleWebSocketMessage(data);
-          } catch (e) {
-            console.error('WS message parse error', e, event.data);
+          } catch (err) {
+            Logger.error('WEBSOCKET', 'WS message parse error', err, event.data);
           }
         };
     
         ws.onclose = (ev) => {
-          console.warn('WebSocket closed, reconnecting in 3s...', ev.reason || '');
+          Logger.warn('WEBSOCKET', 'WebSocket closed, reconnecting in 3s...', ev.reason || '');
           setTimeout(connectWebSocket, 3000);
         };
     
         ws.onerror = (err) => {
-          console.error('WebSocket error', err);
+          Logger.error('WEBSOCKET', 'WebSocket error', err);
           // ws will also fire onclose; let reconnect handle it
         };
       }
     
       function handleWebSocketMessage(data) {
-        console.log('WS ->', data);
+        Logger.log('WEBSOCKET', 'WS ->', data);
         switch (data.type) {
           case 'state_update':
             updateFileList(data.state);
@@ -1367,7 +1370,7 @@
           case 'all_complete':
             // optional: show summary
             if (typeof data.totalTime === 'number') {
-              console.info('All complete totalTime:', data.totalTime);
+              Logger.log('TRANSCRIBE', 'All complete totalTime:', data.totalTime);
             }
             break;
           case 'translation_state':
@@ -1384,7 +1387,7 @@
             break;
           case 'debug_output':
             // optional: append debug logs to an area if you have one
-            console.debug('DEBUG:', data.output);
+            Logger.debug('WEBSOCKET', 'DEBUG:', data.output);
             break;
           case 'info':
             if (data.message) showSuccess(data.message);
@@ -1393,7 +1396,7 @@
             if (data.message) showError(data.message);
             break;
           default:
-            console.log('Unhandled WS message type:', data.type);
+            Logger.log('WEBSOCKET', 'Unhandled WS message type:', data.type);
         }
       }
     
@@ -1578,7 +1581,7 @@
     
       // Notify helpers
       function showError(message, container = 'body') {
-        console.error(message);
+        Logger.error('UI', message);
         // keep UI simple — reuse existing show behavior
         const el = document.createElement('div');
         el.className = 'error-message';
@@ -1587,7 +1590,7 @@
         setTimeout(() => el.remove(), 5000);
       }
       function showSuccess(message, container = 'body') {
-        console.log(message);
+        Logger.log('UI', message);
         const el = document.createElement('div');
         el.className = 'success-message';
         el.textContent = message;
@@ -1863,8 +1866,8 @@
           if (!r.ok) { const d = await r.json(); throw new Error(d.error || 'Failed to start'); }
           localPathInput.value = '';
           showSuccess('Transcription started');
-        } catch (e) {
-          showError(e.message);
+        } catch (error) {
+          showError(error.message);
         } finally {
           transcribePathBtn.disabled = false;
           transcribePathBtn.textContent = 'Start';
@@ -1955,7 +1958,7 @@
           sourceLangSelect.value = 'auto';
           targetLangSelect.value = 'en';
         } catch (err) {
-          console.error('Failed to populate languages', err);
+          Logger.error('UI', 'Failed to populate languages', err);
         }
       }
     
@@ -1971,7 +1974,7 @@
           const swapTotal = (data.swap.total / (1024 * 1024)).toFixed(2);
           systemInfoDiv.innerHTML = `RAM: ${ramUsed} GB / ${ramTotal} GB | Swap: ${swapUsed} GB / ${swapTotal} GB`;
         } catch (err) {
-          console.error('System info error', err);
+          Logger.error('UI', 'System info error', err);
           systemInfoDiv.innerHTML = 'Failed to load system info.';
         }
       }

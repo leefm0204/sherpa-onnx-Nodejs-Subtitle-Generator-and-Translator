@@ -1,7 +1,7 @@
-// cache-optimization.js - LRU and file-based caching optimizations
 import { promises as fs, existsSync } from "node:fs";
 import { join } from "node:path";
 import { LRUCache } from "lru-cache";
+import Logger from "./logger.js";
 
 // Ensure /tmp/genfast-cache directory exists
 const CACHE_DIR = "/tmp/genfast-cache";
@@ -9,7 +9,7 @@ if (!existsSync(CACHE_DIR)) {
   try {
     await fs.mkdir(CACHE_DIR, { recursive: true });
   } catch (error) {
-    console.warn("Failed to create cache directory:", error.message);
+    Logger.warn("Failed to create cache directory:", error);
   }
 }
 
@@ -22,18 +22,18 @@ const lruCache = new LRUCache({
 });
 
 // File-based cache functions
-async function writeCacheFile(key, value) {
+async function writeCacheFile(key, value, ttlSeconds = 3600) {
   try {
     const filePath = join(CACHE_DIR, `${key}.json`);
     const data = {
       value,
       timestamp: Date.now(),
-      ttl: 3600000, // 1 hour default TTL
+      ttl: ttlSeconds * 1000, // store TTL in milliseconds
     };
     await fs.writeFile(filePath, JSON.stringify(data), "utf8");
     return true;
   } catch (error) {
-    console.warn("Failed to write cache file:", error.message);
+    Logger.warn("Failed to write cache file:", error);
     return false;
   }
 }
@@ -45,10 +45,11 @@ async function readCacheFile(key) {
       return null;
     }
 
-    const data = JSON.parse(await fs.readFile(filePath, "utf8"));
+    const raw = await fs.readFile(filePath, "utf8");
+    const data = JSON.parse(raw);
 
-    // Check if expired
-    if (Date.now() - data.timestamp > data.ttl) {
+    // Check if expired (data.ttl is milliseconds)
+    if (!data.timestamp || !data.ttl || Date.now() - data.timestamp > data.ttl) {
       // Delete expired cache file
       await fs.unlink(filePath).catch(() => {});
       return null;
@@ -56,7 +57,7 @@ async function readCacheFile(key) {
 
     return data.value;
   } catch (error) {
-    console.warn("Failed to read cache file:", error.message);
+    Logger.warn("Failed to read cache file:", error);
     return null;
   }
 }
@@ -68,28 +69,31 @@ async function cleanupOldCache() {
     const now = Date.now();
 
     for (const file of files) {
-      if (file.endsWith(".json")) {
-        try {
-          const filePath = join(CACHE_DIR, file);
-          const data = JSON.parse(await fs.readFile(filePath, "utf8"));
+      if (!file.endsWith(".json")) continue;
 
-          // Delete if expired
-          if (now - data.timestamp > data.ttl) {
-            await fs.unlink(filePath);
-          }
-        } catch (error) {
-          // Delete corrupted files
-          const filePath = join(CACHE_DIR, file);
+      const filePath = join(CACHE_DIR, file);
+      try {
+        const raw = await fs.readFile(filePath, "utf8");
+        const data = JSON.parse(raw);
+
+        // Delete if expired (data.ttl in ms)
+        if (!data.timestamp || !data.ttl || now - data.timestamp > data.ttl) {
           await fs.unlink(filePath).catch(() => {});
+          Logger.log(`Deleted expired cache: ${filePath}`);
         }
+      } catch {
+        // If parsing fails or read fails, remove corrupted file
+        await fs.unlink(filePath).catch(() => {});
+        Logger.warn(`Deleted corrupted cache: ${filePath}`);
       }
     }
   } catch (error) {
-    console.warn("Failed to cleanup cache:", error.message);
+    Logger.warn("Failed to cleanup cache:", error);
   }
 }
 
-// Run cleanup every 30 minutes
+// Run cleanup every 30 minutes (and once at startup)
+cleanupOldCache().catch(() => {});
 setInterval(cleanupOldCache, 30 * 60 * 1000);
 
 // LRU Caching Functions
@@ -99,7 +103,7 @@ function getFromLRU(key) {
 
 function setInLRU(key, value, ttl = null) {
   lruCache.set(key, value, {
-    ttl: ttl || 1000 * 60 * 60, // Default 1 hour
+    ttl: ttl || 1000 * 60 * 60, // Default 1 hour (ms)
   });
 }
 
@@ -123,18 +127,11 @@ async function getFromFileCache(key) {
   return await readCacheFile(key);
 }
 
-async function setInFileCache(key, value, ttl = 3600) {
+async function setInFileCache(key, value, ttlSeconds = 3600) {
   try {
-    const filePath = join(CACHE_DIR, `${key}.json`);
-    const data = {
-      value,
-      timestamp: Date.now(),
-      ttl: ttl * 1000, // Convert to milliseconds
-    };
-    await fs.writeFile(filePath, JSON.stringify(data), "utf8");
-    return true;
+    return await writeCacheFile(key, value, ttlSeconds);
   } catch (error) {
-    console.warn("Failed to write cache file:", error.message);
+    Logger.warn("Failed to write cache file:", error);
     return false;
   }
 }
@@ -142,9 +139,9 @@ async function setInFileCache(key, value, ttl = 3600) {
 async function deleteFromFileCache(key) {
   try {
     const filePath = join(CACHE_DIR, `${key}.json`);
-    await fs.unlink(filePath);
+    await fs.unlink(filePath).catch(() => {});
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -155,12 +152,12 @@ async function clearFileCache() {
     for (const file of files) {
       if (file.endsWith(".json")) {
         const filePath = join(CACHE_DIR, file);
-        await fs.unlink(filePath);
+        await fs.unlink(filePath).catch(() => {});
       }
     }
     return true;
   } catch (error) {
-    console.warn("Failed to clear file cache:", error.message);
+    Logger.warn("Failed to clear file cache:", error);
     return false;
   }
 }
@@ -186,10 +183,10 @@ async function getFromCache(key) {
   return null;
 }
 
-async function setInCache(key, value, ttl = 3600) {
+async function setInCache(key, value, ttlSeconds = 3600) {
   // Set in both LRU and file cache for consistency
-  setInLRU(key, value, ttl * 1000); // LRU TTL is in milliseconds
-  await setInFileCache(key, value, ttl); // File cache TTL is in seconds
+  setInLRU(key, value, ttlSeconds * 1000); // LRU TTL expects ms
+  await setInFileCache(key, value, ttlSeconds); // File cache TTL in seconds
 }
 
 async function deleteFromCache(key) {
@@ -216,7 +213,7 @@ async function cachedQuery(queryKey, queryFunction, ttl = 3600) {
 
     return result;
   } catch (error) {
-    console.error("Query execution error:", error.message);
+    Logger.error("Query execution error:", error);
     throw error;
   }
 }
@@ -276,12 +273,12 @@ async function getTranslationCache() {
 
 async function setTranslationCache(cacheData) {
   const cacheKey = "translation_cache";
-  const ttl = 86400; // 24 hours for translation cache
+  const ttl = 86400; // 24 hours for translation cache (seconds)
   await setInCache(cacheKey, cacheData, ttl);
 }
 
 // Initialize cache directory
-console.log(`Using file-based cache in ${CACHE_DIR}`);
+Logger.log(`Using file-based cache in ${CACHE_DIR}`);
 
 // Export all functions
 export {

@@ -6,9 +6,11 @@
   "scripts": {
     "start": "LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-arm64:$LD_LIBRARY_PATH node --expose-gc server.js",
     "start:debug": "LOG_LEVEL=DEBUG LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-arm64:$LD_LIBRARY_PATH node --expose-gc server.js",
+    "cli": "LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-arm64:$LD_LIBRARY_PATH node gensrt.js",
     "dev": "LOG_LEVEL=DEBUG LD_LIBRARY_PATH=$PWD/node_modules/sherpa-onnx-linux-arm64:$LD_LIBRARY_PATH nodemon --expose-gc server.js",
-    "lint": "eslint --fix *.js",
-    "lint:html": "eslint --fix index.html"
+    "lint": "eslint .",
+    "lint:html": "eslint index.html",
+    "lint:fix": "eslint . --fix"
   },
   "keywords": [
     "transcription",
@@ -23,10 +25,12 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@dotenvx/dotenvx": "^1.49.0",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@ffprobe-installer/ffprobe": "^2.1.2",
     "chalk": "^5.6.2",
     "cli-progress": "^3.12.0",
+    "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "lru-cache": "^11.1.0",
     "multer": "^2.0.2",

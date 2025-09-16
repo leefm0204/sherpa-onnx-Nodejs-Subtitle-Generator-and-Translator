@@ -9,6 +9,7 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import multer from "multer";
+import Logger from "./logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,7 +18,13 @@ const uploadsDir = path.join(__dirname, "uploads");
 const downloadDir = process.env.DOWNLOAD_DIR || "/sdcard/Download";
 
 // ensure uploads dir exists
-await fs.promises.mkdir(uploadsDir, { recursive: true });
+(async () => {
+  try {
+    await fs.promises.mkdir(uploadsDir, { recursive: true });
+  } catch (error) {
+    Logger.error('UPLOAD', 'Failed to create uploads directory', error);
+  }
+})();
 
 // Use disk storage for multer to reduce memory usage
 const storage = multer.diskStorage({
@@ -121,7 +128,7 @@ function normalizeFilename(originalName, maxBytes = 200) {
 //       // proceed to write new file
 //     } catch (error) {
 //       // If we can't unlink, still attempt to write (may fail)
-//       console.warn(`Could not unlink existing file ${finalPath}: ${error.message}`);
+//       Logger.warn(`Could not unlink existing file ${finalPath}: ${error.message}`);
 //     }
 //   } catch {
 //     // does not exist — fine
@@ -132,11 +139,11 @@ function normalizeFilename(originalName, maxBytes = 200) {
 //     const readStream = Readable.from(buffer);
 //     readStream.pipe(writeStream);
 //     writeStream.on('finish', () => {
-//       console.log(`File saved (overwrite mode): ${filename}`);
+//       Logger.log(`File saved (overwrite mode): ${filename}`);
 //       resolve({ path: finalPath, filename });
 //     });
 //     writeStream.on('error', (error) => {
-//       console.error(`Error saving file ${filename}:`, error);
+//       Logger.error(`Error saving file ${filename}:`, error);
 //       reject(error);
 //     });
 //   });
@@ -176,10 +183,10 @@ async function renameSrtToOriginal(srtPath) {
       }
     }
 
-    console.log(`Moved SRT to Downloads: ${safeSrtFilename}`);
+    Logger.log('SRT', `Moved SRT to Downloads: ${safeSrtFilename}`);
     return { success: true, finalPath: targetPath, finalName: safeSrtFilename };
   } catch (error) {
-    console.warn(`Failed to move SRT ${srtPath}: ${error.message}`);
+    Logger.warn('SRT', `Failed to move SRT ${srtPath}: ${error.message}`);
     return { success: false, error: error.message };
   }
 }
@@ -189,13 +196,13 @@ async function renameSrtToOriginal(srtPath) {
 async function deleteUploadedFile(base) {
   const info = uploadMap.get(base);
   if (!info) {
-    console.log(`No upload mapping found for base: ${base}`);
+    Logger.log('UPLOAD', `No upload mapping found for base: ${base}`);
     return false;
   }
 
   try {
     await fs.promises.unlink(info.uploadedPath);
-    console.log(`Deleted uploaded file: ${info.uploadedFilename}`);
+    Logger.log('UPLOAD', `Deleted uploaded file: ${info.uploadedFilename}`);
     uploadMap.delete(base);
     // delete any other keys pointing to the same info (originalBase/uploadedBase)
     if (info.originalBase && info.originalBase !== base)
@@ -204,9 +211,7 @@ async function deleteUploadedFile(base) {
       uploadMap.delete(info.uploadedBase);
     return true;
   } catch (error) {
-    console.warn(
-      `Failed to delete uploaded file ${info.uploadedPath}: ${error.message}`,
-    );
+    Logger.warn('UPLOAD', `Failed to delete uploaded file ${info.uploadedPath}: ${error.message}`);
     // still remove mapping to avoid leaking it
     uploadMap.delete(base);
     if (info.originalBase) uploadMap.delete(info.originalBase);
@@ -219,13 +224,11 @@ async function deleteUploadedFileByMatch(srtBase) {
   // Fallback: iterate through the map to find a match if direct lookup fails.
   for (const [key, info] of uploadMap.entries()) {
     if (info.uploadedBase === srtBase || info.originalBase === srtBase) {
-      console.log(`Found matching file in map for SRT base: ${srtBase}`);
+      Logger.log('UPLOAD', `Found matching file in map for SRT base: ${srtBase}`);
       return await deleteUploadedFile(key); // Use the key to delete
     }
   }
-  console.log(
-    `No matching uploaded file found in map for SRT base: ${srtBase}`,
-  );
+  Logger.log('UPLOAD', `No matching uploaded file found in map for SRT base: ${srtBase}`);
   return false;
 }
 
@@ -234,7 +237,7 @@ async function deleteUploadedFileByMatch(srtBase) {
 async function cleanupAfterSrt(srtPath) {
   const renameResult = await renameSrtToOriginal(srtPath);
   if (!renameResult.success) {
-    console.error(`Failed to move/rename SRT: ${renameResult.error}`);
+    Logger.error('SRT', `Failed to move/rename SRT: ${renameResult.error}`);
     return;
   }
 
@@ -244,7 +247,7 @@ async function cleanupAfterSrt(srtPath) {
     await deleteUploadedFileByMatch(srtBase);
   }
 
-  console.log(`Cleanup completed for SRT: ${renameResult.finalName}`);
+  Logger.log('SRT', `Cleanup completed for SRT: ${renameResult.finalName}`);
 }
 
 /* ---------- Cleanup helpers for explicit cleanup ---------- */
@@ -257,15 +260,15 @@ async function cleanupUploadedFiles(filePaths) {
         const filePath = path.join(uploadsDir, file);
         try {
           await fs.promises.unlink(filePath);
-          console.log(`Cleaned up uploaded file: ${file}`);
+          Logger.log('UPLOAD', `Cleaned up uploaded file: ${file}`);
         } catch (error) {
-          console.warn(`Failed to clean up ${file}: ${error.message}`);
+          Logger.warn('UPLOAD', `Failed to clean up ${file}: ${error.message}`);
         }
       }
       uploadMap.clear();
-      console.log("All uploaded files cleaned up");
+      Logger.log('UPLOAD', "All uploaded files cleaned up");
     } catch (error) {
-      console.warn("Error during cleanup:", error.message);
+      Logger.warn('UPLOAD', "Error during cleanup", error);
     }
     return;
   }
@@ -274,14 +277,14 @@ async function cleanupUploadedFiles(filePaths) {
     try {
       if (filePath.startsWith(uploadsDir)) {
         await fs.promises.unlink(filePath);
-        console.log(`Cleaned up uploaded file: ${path.basename(filePath)}`);
+        Logger.log('UPLOAD', `Cleaned up uploaded file: ${path.basename(filePath)}`);
         const fileName = path.basename(filePath);
         const extension = path.extname(fileName);
         const base = path.basename(fileName, extension);
         uploadMap.delete(base);
       }
     } catch (error) {
-      console.warn(`Failed to clean up ${filePath}: ${error.message}`);
+      Logger.warn('UPLOAD', `Failed to clean up ${filePath}: ${error.message}`);
     }
   }
 }
@@ -293,7 +296,7 @@ function uploadSingleFile(fieldName = "file") {
     const middleware = upload.single(fieldName);
     middleware(request, res, async (error) => {
       if (error) {
-        console.error("Upload middleware error:", error);
+        Logger.error('UPLOAD', 'Upload middleware error', error);
         return next(error);
       }
 
@@ -342,11 +345,9 @@ function uploadSingleFile(fieldName = "file") {
           uploadMap.set(uploadedBase, info);
           if (originalBase !== uploadedBase) uploadMap.set(originalBase, info);
 
-          console.log(
-            `Tracked uploaded file: ${request.file.filename} (original: ${request.file.originalname}, uploadedBase=${uploadedBase}, originalBase=${originalBase})`,
-          );
+          Logger.log('UPLOAD', `Tracked uploaded file: ${request.file.filename} (original: ${request.file.originalname}, uploadedBase=${uploadedBase}, originalBase=${originalBase})`);
         } catch (error) {
-          console.error("Error saving uploaded file:", error);
+          Logger.error('UPLOAD', 'Error saving uploaded file', error);
           return next(error);
         }
       }
@@ -365,21 +366,74 @@ function uploadSingleFile(fieldName = "file") {
 //     watcher.on('add', async (filePath) => {
 //       const file = path.basename(filePath);
 //       if (!file.toLowerCase().endsWith('.srt')) return;
-//       console.log(`Detected new .srt: ${file}`);
+//       Logger.log(`Detected new .srt: ${file}`);
 //       await cleanupAfterSrt(filePath);
 //     });
 //
 //     watcher.on('error', (error) => {
-//       console.error('Watcher error:', error);
+//       Logger.error('Watcher error:', error);
 //     });
 //
-//     console.log(`Watching ${downloadDir} for new .srt files...`);
+//     Logger.log(`Watching ${downloadDir} for new .srt files...`);
 //   } catch (error) {
-//     console.error('Failed to start watcher — check permissions and that path exists:', error.message);
+//     Logger.error('Failed to start watcher — check permissions and that path exists:', error);
 //   }
 // }
 // startDownloadWatcher();
 
+/* ---------- Garbage Collection ---------- */
+
+/**
+ * Perform garbage collection on the uploadMap to remove stale entries
+ * and call explicit garbage collection if available
+ */
+function performGC() {
+  try {
+    // Trigger Node.js garbage collection if available
+    if (global.gc) {
+      global.gc();
+    }
+  } catch (error) {
+    Logger.warn('GC', 'Failed to perform garbage collection', error);
+  }
+}
+
+/**
+ * Cleanup old/stale entries in the uploadMap that haven't been accessed in a while
+ * This helps prevent memory leaks over time
+ */
+function cleanupStaleUploads(maxAgeMs = 30 * 60 * 1000) { // 30 minutes default
+  const now = Date.now();
+  let cleanedCount = 0;
+  
+  for (const [key, info] of uploadMap.entries()) {
+    // Remove entries that are older than maxAgeMs
+    if (info.uploadedAt && (now - info.uploadedAt > maxAgeMs)) {
+      uploadMap.delete(key);
+      cleanedCount++;
+    }
+  }
+  
+  if (cleanedCount > 0) {
+    Logger.log('UPLOAD', `Cleaned up ${cleanedCount} stale upload entries from map`);
+  }
+  
+  // Perform garbage collection after cleanup
+  performGC();
+}
+
+/**
+ * Periodic cleanup function to remove stale uploads
+ * Runs every 10 minutes by default
+ */
+function startPeriodicCleanup(intervalMs = 10 * 60 * 1000) {
+  setInterval(() => {
+    cleanupStaleUploads();
+  }, intervalMs);
+  
+  Logger.log('UPLOAD', 'Started periodic upload cleanup task');
+}
+        
 /* ---------- Exports ---------- */
 
 export {
@@ -392,4 +446,7 @@ export {
   uploadMap,
   uploadsDir,
   downloadDir,
+  performGC,
+  cleanupStaleUploads,
+  startPeriodicCleanup,
 };
