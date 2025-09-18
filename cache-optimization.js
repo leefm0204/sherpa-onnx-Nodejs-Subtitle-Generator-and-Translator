@@ -247,6 +247,7 @@ async function getCachedSystemInfo() {
         swapFree = object["SwapFree"] || 0;
         swapUsed = swapTotal - swapFree;
       } catch (error) {
+        Logger.warn("Using fallback system info method (cross-platform compatibility)");
         // Fallback to cross-platform os module
         const totalBytes = os.totalmem();
         const freeBytes = os.freemem();
