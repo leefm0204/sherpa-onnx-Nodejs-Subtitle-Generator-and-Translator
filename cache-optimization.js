@@ -1,5 +1,6 @@
 import { promises as fs, existsSync } from "node:fs";
 import { join } from "node:path";
+import os from "node:os";
 import { LRUCache } from "lru-cache";
 import Logger from "./logger.js";
 
@@ -226,23 +227,41 @@ async function getCachedSystemInfo() {
   return await cachedQuery(
     cacheKey,
     async () => {
-      // This would typically be a database query or expensive operation
-      // For now, we'll simulate system info retrieval
-      const memInfo = await fs.readFile("/proc/meminfo", "utf8");
-      const lines = memInfo.split("\n");
-      const object = {};
-      for (const line of lines) {
-        const [k, v] = line.split(":");
-        if (k && v)
-          object[k.trim()] = Number.parseInt(v.trim().replace(" kB", ""), 10);
-      }
+      let ramTotal, ramAvailable, ramUsed, swapTotal, swapFree, swapUsed;
 
-      const ramTotal = object["MemTotal"] || 0;
-      const ramAvailable = object["MemAvailable"] || 0;
-      const ramUsed = ramTotal - ramAvailable;
-      const swapTotal = object["SwapTotal"] || 0;
-      const swapFree = object["SwapFree"] || 0;
-      const swapUsed = swapTotal - swapFree;
+      try {
+        // Try to read /proc/meminfo (Linux systems)
+        const memInfo = await fs.readFile("/proc/meminfo", "utf8");
+        const lines = memInfo.split("\n");
+        const object = {};
+        for (const line of lines) {
+          const [k, v] = line.split(":");
+          if (k && v)
+            object[k.trim()] = Number.parseInt(v.trim().replace(" kB", ""), 10);
+        }
+
+        ramTotal = object["MemTotal"] || 0;
+        ramAvailable = object["MemAvailable"] || 0;
+        ramUsed = ramTotal - ramAvailable;
+        swapTotal = object["SwapTotal"] || 0;
+        swapFree = object["SwapFree"] || 0;
+        swapUsed = swapTotal - swapFree;
+      } catch (error) {
+        // Fallback to cross-platform os module
+        const totalBytes = os.totalmem();
+        const freeBytes = os.freemem();
+        const usedBytes = totalBytes - freeBytes;
+
+        // Convert bytes to kilobytes to match /proc/meminfo format
+        ramTotal = Math.round(totalBytes / 1024);
+        ramAvailable = Math.round(freeBytes / 1024);
+        ramUsed = Math.round(usedBytes / 1024);
+        
+        // os module doesn't provide swap info, so set to 0
+        swapTotal = 0;
+        swapFree = 0;
+        swapUsed = 0;
+      }
 
       return {
         ram: {
