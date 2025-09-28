@@ -139,14 +139,6 @@
             box-sizing: border-box;
         }
 
-        /* Divider for sections */
-        .section-divider {
-            height: 1px;
-            background: var(--divider-color);
-            margin: 3rem 0;
-            border: none;
-        }
-
         /* System Info - Glassmorphism Design */
         #system-info {
             background: var(--glass-bg);
@@ -164,106 +156,6 @@
             position: relative;
             overflow: hidden;
             border: 1px solid var(--border-white);
-        }
-
-        #system-info::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-        }
-
-        /* Header - Enhanced Typography */
-        header {
-            text-align: center;
-            margin-bottom: 4rem;
-            position: relative;
-        }
-
-        header h1 {
-            font-size: clamp(2.5rem, 5vw, 4rem);
-            font-weight: 800;
-            background: var(--gradient-accent);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 1rem;
-            letter-spacing: -0.02em;
-            line-height: 1.1;
-            position: relative;
-        }
-
-        header .subtitle {
-            font-size: 1.125rem;
-            color: var(--text-tertiary);
-            font-weight: 400;
-            max-width: 600px;
-            margin: 0 auto;
-            line-height: 1.7;
-        }
-
-        /* Main Content Layout */
-        .main-content {
-            display: flex;
-            gap: 1.5rem;
-            margin-bottom: 3rem;
-        }
-        
-        .upload-section,
-        .status-section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .upload-section .card,
-        .status-section .card {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .upload-section .card-body,
-        .status-section .card-body {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 1.5rem;
-            box-sizing: border-box; /* Include padding in element's total width and height */
-            justify-content: space-between; /* Distribute space between elements */
-        }
-        
-        .status-section .card-body {
-            min-height: 450px; /* Increased from 400px */
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 1.5rem;
-            box-sizing: border-box; /* Include padding in element's total width and height */
-            justify-content: space-between; /* Distribute space between elements */
-        }
-        
-        .file-list {
-            flex: 1;
-            min-height: 300px;
-            max-height: 400px;
-            overflow-y: auto;
-            margin-bottom: 0; /* Remove bottom margin */
-        }
-        
-        .control-buttons {
-            margin-top: auto; /* Push buttons to the bottom */
-            display: flex;
-            gap: 1rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid var(--border-subtle);
-            border: 1px solid var(--border-white);
-            border-radius: 12px;
-            padding: 1rem;
-            background: var(--surface-primary);
         }
 
         /* Section Headers */
@@ -298,6 +190,67 @@
             line-height: 1.6;
         }
 
+        /* Main Content Layout */
+        .main-content {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .upload-section,
+        .status-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .upload-section .card,
+        .status-section .card {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .upload-section .card-body,
+        .status-section .card-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            box-sizing: border-box;
+            justify-content: space-between;
+        }
+        
+        .status-section .card-body {
+            min-height: 450px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            box-sizing: border-box;
+            justify-content: space-between;
+        }
+        
+        .file-list {
+            flex: 1;
+            min-height: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 0;
+        }
+        
+        .control-buttons {
+            margin-top: auto;
+            display: flex;
+            gap: 1rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-subtle);
+            border: 1px solid var(--border-white);
+            border-radius: 12px;
+            padding: 1rem;
+            background: var(--surface-primary);
+        }
+
         /* Card - Advanced Glassmorphism */
         .card {
             background: var(--glass-bg);
@@ -312,24 +265,10 @@
             border: 1px solid var(--border-white);
         }
 
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-        }
-
         .card:hover {
             transform: translateY(-8px) scale(1.02);
             box-shadow: var(--shadow-xl);
             border-color: var(--border-emphasis);
-        }
-
-        .card:hover::before {
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
         }
 
         /* Card Headers - Sophisticated Gradients */
@@ -349,27 +288,8 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
 
-        .translation-header {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #4facfe 100%);
-        }
-
         .status-header {
             background: linear-gradient(135deg, #00b894 0%, #55a3ff 100%);
-        }
-
-        .card-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            transition: left 0.6s;
-        }
-
-        .card:hover .card-header::before {
-            left: 100%;
         }
 
         .card-header h2 {
@@ -390,16 +310,16 @@
             padding: 1.5rem;
         }
 
-        /* Input Sections - Organized Layout */
+        /* Input Sections */
         .input-section {
-            margin: 0 0 1.5rem 0; /* Remove top margin, keep bottom margin */
+            margin: 0 0 1.5rem 0;
         }
         
         .input-section h3 {
             font-size: 1.125rem;
             font-weight: 600;
             color: var(--text-primary);
-            margin: 0 0 0.5rem 0; /* Remove top margin, keep bottom margin */
+            margin: 0 0 0.5rem 0;
             display: flex;
             align-items: center;
             gap: 0.75rem;
@@ -408,18 +328,18 @@
         .input-section .subtitle {
             color: var(--text-tertiary);
             font-size: 0.9rem;
-            margin: 0 0 1rem 0; /* Remove top margin, keep bottom margin */
+            margin: 0 0 1rem 0;
         }
         
         .file-picker-section {
-            margin: 1rem 0 0 0; /* Remove bottom margin, keep top margin */
+            margin: 1rem 0 0 0;
         }
         
         .input-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1rem;
-            margin: 0 0 1rem 0; /* Remove top margin, keep bottom margin */
+            margin: 0 0 1rem 0;
         }
         
         .input-row > :only-child {
@@ -429,7 +349,7 @@
         .button-row {
             display: flex;
             gap: 1rem;
-            margin: 1rem 0 0 0; /* Remove bottom margin, keep top margin */
+            margin: 1rem 0 0 0;
             flex-wrap: wrap;
         }
 
@@ -444,21 +364,6 @@
             background: var(--border-subtle);
             margin: 1.5rem 0;
             border: none;
-        }
-        
-        /* Ensure proper overflow handling */
-        .card-body {
-            overflow-x: hidden;
-        }
-        
-        .input {
-            max-width: 100%;
-            box-sizing: border-box;
-        }
-        
-        .file-name {
-            word-break: break-word;
-            overflow-wrap: break-word;
         }
 
         .input {
@@ -490,13 +395,7 @@
             font-weight: 400;
         }
 
-        .language-selects .input,
-        .input#modelSelect,
-        .input#srtPathInput {
-            border: 1px solid var(--border-white);
-        }
-
-        /* Button Styling - Premium Feel */
+        /* Button Styling */
         .btn {
             padding: 0.875rem 1.5rem;
             border: none;
@@ -514,25 +413,10 @@
             overflow: hidden;
             font-family: inherit;
             width: 100%;
-            margin: 0; /* Remove all margins */
+            margin: 0;
             border: 1px solid var(--border-white);
             box-sizing: border-box;
             min-height: 44px;
-        }
-
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.6s;
-        }
-
-        .btn:hover::before {
-            left: 100%;
         }
 
         .btn-primary {
@@ -547,10 +431,6 @@
             box-shadow: var(--shadow-lg);
         }
 
-        .btn-primary:active {
-            transform: translateY(0) scale(1);
-        }
-
         .btn-secondary {
             background: var(--surface-secondary);
             color: var(--text-secondary);
@@ -562,19 +442,6 @@
             background: var(--surface-hover);
             border-color: var(--border-emphasis);
             transform: translateY(-1px);
-        }
-
-        /* New colored buttons */
-        .btn-success {
-            background: var(--gradient-success);
-            color: white;
-            box-shadow: var(--shadow-md);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .btn-success:hover {
-            transform: translateY(-2px) scale(1.02);
-            box-shadow: var(--shadow-lg);
         }
 
         .btn-danger {
@@ -595,19 +462,19 @@
             transform: none !important;
         }
 
-        /* File List - Enhanced Scrolling */
+        /* File List */
         .file-list {
-            flex: 1 1 auto; /* Allow flex grow and shrink */
-            min-height: 350px; /* Increased from 300px */
-            max-height: none; /* Remove max height limit */
+            flex: 1 1 auto;
+            min-height: 350px;
+            max-height: none;
             overflow-y: auto;
-            margin: 0; /* Remove all margins */
-            box-sizing: border-box; /* Include padding and border in element's total width and height */
+            margin: 0;
+            box-sizing: border-box;
             border: 1px solid var(--border-white);
             border-radius: 12px;
             padding: 0.5rem;
             background: var(--surface-primary);
-            align-self: stretch; /* Stretch to fill container width */
+            align-self: stretch;
         }
 
         .file-list::-webkit-scrollbar {
@@ -629,23 +496,23 @@
             background: var(--border-emphasis);
         }
 
-        /* Empty State - Elegant Design */
+        /* Empty State */
         .empty-state {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 2rem 1rem; /* Reduced padding */
+            padding: 2rem 1rem;
             text-align: center;
             height: 100%;
-            min-height: 350px; /* Adjusted to match file-list min-height */
+            min-height: 350px;
             opacity: 0.7;
             border: 1px solid var(--border-white);
             border-radius: 12px;
             background: var(--surface-primary);
-            margin: 0; /* Remove any margin */
-            box-sizing: border-box; /* Include padding and border in element's total width and height */
-            flex: 1 1 auto; /* Allow it to expand */
+            margin: 0;
+            box-sizing: border-box;
+            flex: 1 1 auto;
         }
 
         .empty-state i {
@@ -669,7 +536,7 @@
             font-weight: 400;
         }
 
-        /* File Item - Sophisticated Layout */
+        /* File Item */
         .file-item {
             padding: 1.5rem;
             border-bottom: 1px solid var(--border-subtle);
@@ -677,23 +544,8 @@
             position: relative;
         }
         
-        .file-item::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 3px;
-            background: transparent;
-            transition: background 0.3s;
-        }
-        
         .file-item:hover {
             background: var(--surface-primary);
-        }
-        
-        .file-item:hover::before {
-            background: var(--accent-primary);
         }
         
         .file-item:last-child {
@@ -704,7 +556,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin: 0 0 1rem 0; /* Remove top margin, keep bottom margin */
+            margin: 0 0 1rem 0;
         }
         
         .file-name {
@@ -717,7 +569,7 @@
             max-width: 70%;
         }
 
-        /* Status Badges - Modern Design */
+        /* Status Badges */
         .file-status {
             padding: 0.375rem 1rem;
             border-radius: 20px;
@@ -762,18 +614,12 @@
             border-color: rgba(116, 185, 255, 0.2);
         }
 
-        .status-queued {
-            background: var(--surface-secondary);
-            color: var(--text-secondary);
-            border-color: var(--border-default);
-        }
-
         @keyframes pulse {
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.8; transform: scale(1.05); }
         }
 
-        /* Progress Details - Monospace Styling */
+        /* Progress Details */
         .progress-details {
             display: flex;
             justify-content: space-between;
@@ -787,7 +633,7 @@
             overflow-wrap: break-word;
         }
 
-        /* Progress Bar - Advanced Animation */
+        /* Progress Bar */
         .progress-bar {
             width: 100%;
             height: 8px;
@@ -810,7 +656,7 @@
             overflow: hidden;
         }
 
-        /* File Actions - Enhanced Styling */
+        /* File Actions */
         .file-actions {
             margin-top: 1rem;
             font-size: 0.9rem;
@@ -835,23 +681,6 @@
             background: var(--error-bg);
         }
 
-        /* Control Buttons */
-        .control-buttons {
-            display: flex;
-            gap: 1rem;
-            margin-top: auto; /* Push buttons to the bottom */
-            border-top: 1px solid var(--border-subtle);
-            border: 1px solid var(--border-white);
-            border-radius: 12px;
-            padding: 1rem;
-            background: var(--surface-primary);
-            margin: 0; /* Remove all margins */
-            position: relative; /* Ensure proper positioning */
-            z-index: 1; /* Ensure it's above other elements */
-            box-sizing: border-box; /* Include padding and border in element's total width and height */
-            flex-shrink: 0; /* Prevent shrinking */
-        }
-
         /* File Picker Buttons */
         .file-picker-buttons {
             display: flex;
@@ -860,9 +689,9 @@
             border-radius: 12px;
             padding: 1rem;
             background: var(--surface-primary);
-            margin: 2rem 0 0 0; /* Increased top margin to push buttons down */
+            margin: 2rem 0 0 0;
             box-sizing: border-box;
-            flex-shrink: 0; /* Prevent shrinking */
+            flex-shrink: 0;
         }
 
         .control-buttons .btn,
@@ -871,93 +700,27 @@
             font-size: 0.9rem;
             padding: 0.875rem 1.5rem;
             width: auto;
-            margin: 0; /* Ensure no extra margins on buttons */
-            min-height: 44px; /* Ensure consistent minimum height */
+            margin: 0;
+            min-height: 44px;
         }
 
-        /* Alert Messages - Refined Design */
-        .error-message, .success-message {
-            margin-top: 1.5rem;
-            padding: 1rem 1.25rem;
-            border-radius: 12px;
-            font-size: 0.9rem;
+        /* Form Group Styling */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            gap: 0.5rem;
+            margin: 0;
+        }
+
+        .input-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
             font-weight: 500;
-            animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid;
-            backdrop-filter: var(--backdrop-blur);
+            margin: 0;
         }
 
-        .error-message {
-            color: var(--error);
-            background: var(--error-bg);
-            border-color: rgba(232, 67, 147, 0.2);
-        }
-
-        .success-message {
-            color: var(--success);
-            background: var(--success-bg);
-            border-color: rgba(0, 184, 148, 0.2);
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px) scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        /* Loading State - Sophisticated Animation */
-        .btn:disabled {
-            position: relative;
-            color: transparent;
-        }
-
-        .btn:disabled::after {
-            content: '';
-            position: absolute;
-            width: 18px;
-            height: 18px;
-            top: 50%;
-            left: 50%;
-            margin-left: -9px;
-            margin-top: -9px;
-            border: 2px solid transparent;
-            border-top-color: currentColor;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Card Entrance Animation */
-        .card {
-            animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-            animation-fill-mode: both;
-        }
-
-        .card:nth-child(1) { animation-delay: 0.1s; }
-        .card:nth-child(2) { animation-delay: 0.2s; }
-        .card:nth-child(3) { animation-delay: 0.3s; }
-        .card:nth-child(4) { animation-delay: 0.4s; }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(40px) scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        /* Responsive Design - Mobile First */
+        /* Responsive Design */
         @media (max-width: 768px) {
             .container {
                 padding: 1rem;
@@ -965,12 +728,8 @@
             }
 
             .main-content {
-                grid-template-columns: 1fr;
+                flex-direction: column;
                 gap: 1.5rem;
-            }
-
-            header h1 {
-                font-size: 2.5rem;
             }
 
             .card-header {
@@ -988,7 +747,7 @@
             .control-buttons,
             .file-picker-buttons {
                 flex-direction: column;
-                margin: 2rem 0 0 0; /* Increased top margin for mobile view */
+                margin: 2rem 0 0 0;
             }
 
             .progress-details {
@@ -1013,77 +772,6 @@
             
             .file-name {
                 max-width: 60%;
-            }
-        }
-        
-        /* Form Group Styling */
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-            gap: 0.5rem;
-            margin: 0; /* Remove any margin */
-        }
-
-        .input-label {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-            margin: 0; /* Remove any margin */
-        }
-
-        /* Very small screens */
-        @media (max-width: 480px) {
-            .container {
-                padding: 0.75rem;
-                margin: 0.25rem;
-            }
-            
-            .card-body {
-                padding: 1rem;
-            }
-            
-            .file-info {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.5rem;
-            }
-            
-            .file-name {
-                max-width: 100%;
-            }
-            
-            .file-status {
-                align-self: flex-end;
-            }
-            
-            .control-buttons,
-            .file-picker-buttons {
-                flex-direction: column;
-            }
-            
-            .control-buttons .btn,
-            .file-picker-buttons .btn {
-                width: 100%;
-                padding: 0.875rem 1rem;
-            }
-        }
-
-        /* High contrast mode support */
-        @media (prefers-contrast: high) {
-            :root {
-                --border-default: rgba(255, 255, 255, 0.3);
-                --border-emphasis: rgba(255, 255, 255, 0.5);
-                --text-tertiary: rgba(255, 255, 255, 0.8);
-            }
-        }
-
-        /* Reduced motion support */
-        @media (prefers-reduced-motion: reduce) {
-            *, ::before, ::after {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
             }
         }
     </style>
@@ -1114,12 +802,11 @@
                             <div class="input-row">
                                 <div class="form-group">
                                     <label for="modelSelect" class="input-label">Model</label>
-                                    <select id="modelSelect" class="input" aria-describedby="modelHelp">
+                                    <select id="modelSelect" class="input">
                                         <option value="senseVoice">SenseVoice (Multilingual: zh,en,ja,ko,yue)</option>
                                         <option value="nemoCtc">NeMo CTC (Multilingual: be,de,en,es,fr,hr,it,pl,ru,uk)</option>
                                         <option value="transducer">Transducer (Japanese only)</option>
                                     </select>
-                                    <div id="modelHelp" class="visually-hidden">Select the speech recognition model to use</div>
                                 </div>
                             </div>
                             <button type="button" class="btn btn-primary" id="transcribePathBtn">
@@ -1133,23 +820,13 @@
                             <h3><i class="fas fa-cloud-upload-alt"></i> File Upload Processing</h3>
                             <p class="subtitle">Upload files from your device for transcription</p>
                             <div class="file-picker-section">
-                                <div class="visually-hidden">
-  <label for="filePicker">Select audio or video files for transcription</label>
-  <input 
-    type="file" 
-    id="filePicker" 
-    multiple 
-    accept="audio/*,video/*"
-    aria-describedby="filePickerHelp"
-    style="display:none">
-</div>
-<div id="filePickerHelp" class="visually-hidden">Supported formats: MP3, WAV, M4A, OGG, MP4, MKV, MOV, AVI, WEBM</div>
+                                <input type="file" id="filePicker" multiple accept="audio/*,video/*" style="display:none">
                                 <div class="file-picker-buttons">
                                     <button type="button" id="openFilePickerBtn" class="btn btn-secondary">
                                         <i class="fas fa-folder-open"></i> Browse Files
                                     </button>
                                     <button type="button" id="uploadFilesBtn" class="btn btn-primary">
-                                        <i class="fas fa-upload"></i> Upload &amp; Process
+                                        <i class="fas fa-upload"></i> Upload & Process
                                     </button>
                                 </div>
                             </div>
@@ -1180,103 +857,20 @@
                                 <i class="fas fa-trash"></i>
                                 Clear List
                             </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <hr class="section-divider">
-
-    <div class="container">
-        <div class="section-header">
-            <h1>SRT Translator</h1>
-            <p class="subtitle">Translate subtitles using Google Translate with automatic language detection.</p>
-        </div>
-
-        <div class="main-content">
-            <div class="upload-section">
-                <div class="card">
-                    <div class="card-header translation-header">
-                        <i class="fas fa-language"></i>
-                        <h2>Translate SRT</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="input-section">
-                            <h3><i class="fas fa-desktop"></i> Direct Path Translation</h3>
-                            <p class="subtitle">Enter SRT file or folder path directly on the server</p>
-                            <input type="text" id="srtPathInput" class="input" placeholder="e.g., /absolute/path/to/your/file.srt" required>
-                            <div class="input-row">
-                                <div class="form-group">
-                                    <label for="sourceLang" class="input-label">Source Language</label>
-                                    <select id="sourceLang" class="input" aria-describedby="sourceLangHelp"></select>
-                                    <div id="sourceLangHelp" class="visually-hidden">Select the original language of the subtitles</div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="targetLang" class="input-label">Target Language</label>
-                                    <select id="targetLang" class="input" aria-describedby="targetLangHelp"></select>
-                                    <div id="targetLangHelp" class="visually-hidden">Select the language to translate to</div>
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-primary" id="translateBtn">
-                                <i class="fas fa-language"></i> Translate Path
+                            <button type="button" class="btn btn-secondary" id="toggleDebugBtn">
+                                <i class="fas fa-terminal"></i>
+                                Show Debug
                             </button>
                         </div>
-
-                        <div class="divider"></div>
-
-                        <div class="input-section">
-                            <h3><i class="fas fa-cloud-upload-alt"></i> SRT File Upload Translation</h3>
-                            <p class="subtitle">Upload SRT files from your device for translation</p>
-                            <div class="file-picker-section">
-                                <div class="visually-hidden">
-  <label for="srtFilePicker">Select SRT files for translation</label>
-  <input 
-    type="file" 
-    id="srtFilePicker" 
-    multiple 
-    accept=".srt" 
-    aria-describedby="srtFilePickerHelp"
-    style="display:none">
-</div>
-<div id="srtFilePickerHelp" class="visually-hidden">Select one or more SRT files to translate</div>
-                                <div class="file-picker-buttons">
-                                    <button type="button" id="openSrtFilePickerBtn" class="btn btn-secondary">
-                                        <i class="fas fa-folder-open"></i> Browse SRT Files
-                                    </button>
-                                    <button type="button" id="uploadSrtFilesBtn" class="btn btn-primary">
-                                        <i class="fas fa-upload"></i> Upload &amp; Translate
-                                    </button>
-                                </div>
+                        
+                        <!-- Debug Console -->
+                        <div id="debugConsole" style="display: none; margin-top: 1rem; border: 1px solid var(--border-white); border-radius: 12px; background: var(--surface-primary); max-height: 300px; overflow-y: auto;">
+                            <div style="padding: 1rem; border-bottom: 1px solid var(--border-subtle); background: var(--surface-secondary); border-radius: 12px 12px 0 0;">
+                                <h4 style="margin: 0; color: var(--text-primary); font-size: 0.9rem;"><i class="fas fa-terminal"></i> Debug Console</h4>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="status-section">
-                <div class="card">
-                    <div class="card-header status-header">
-                        <i class="fas fa-list-ol"></i>
-                        <h2>Translation Queue</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="file-list" id="translationQueue">
-                            <div class="empty-state" id="emptyTranslationQueue">
-                                <i class="fas fa-file-alt"></i>
-                                <h3>No files in queue</h3>
-                                <p>Insert SRT folder path to start translating.</p>
+                            <div id="debugOutput" style="padding: 1rem; font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace; font-size: 0.8rem; color: var(--text-tertiary); line-height: 1.4; white-space: pre-wrap; word-break: break-word;">
+                                Waiting for debug output...
                             </div>
-                        </div>
-                        <div class="control-buttons">
-                            <button type="button" class="btn btn-danger" id="stopTranslationBtn">
-                                <i class="fas fa-stop"></i>
-                                Stop Translation
-                            </button>
-                            <button type="button" class="btn btn-secondary" id="clearTranslationBtn">
-                                <i class="fas fa-trash"></i>
-                                Clear Translation
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -1293,20 +887,15 @@
       const emptyState = document.getElementById('emptyState');
       const localPathInput = document.getElementById('localPathInput');
       const transcribePathBtn = document.getElementById('transcribePathBtn');
-    
-      // Translation elements
-      const srtPathInput = document.getElementById('srtPathInput');
-      const sourceLangSelect = document.getElementById('sourceLang');
-      const targetLangSelect = document.getElementById('targetLang');
-      const translateBtn = document.getElementById('translateBtn');
-      const translationQueue = document.getElementById('translationQueue');
-      const emptyTranslationQueue = document.getElementById('emptyTranslationQueue');
-    
+      
       // Control buttons
       const stopProcessBtn = document.getElementById('stopProcessBtn');
       const clearListBtn = document.getElementById('clearListBtn');
-      const stopTranslationBtn = document.getElementById('stopTranslationBtn');
-      const clearTranslationBtn = document.getElementById('clearTranslationBtn');
+      
+      // Debug console elements
+      const toggleDebugBtn = document.getElementById('toggleDebugBtn');
+      const debugConsole = document.getElementById('debugConsole');
+      const debugOutput = document.getElementById('debugOutput');
     
       let ws = null;
     
@@ -1315,12 +904,10 @@
         const wsUrl = `${protocol}//${window.location.host}`;
         Logger.log('WEBSOCKET', 'Attempting WebSocket connection to:', wsUrl);
     
-        // Create new socket each time
         ws = new WebSocket(wsUrl);
     
         ws.onopen = () => {
           Logger.log('WEBSOCKET', 'WebSocket connected');
-          // Ask server for current states
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'request_state' }));
           }
@@ -1342,19 +929,17 @@
     
         ws.onerror = (err) => {
           Logger.error('WEBSOCKET', 'WebSocket error', err);
-          // ws will also fire onclose; let reconnect handle it
         };
       }
     
       function handleWebSocketMessage(data) {
         Logger.log('WEBSOCKET', 'WS ->', data);
+        
+        if (data.type === 'transcription_progress') {
+          console.log(`[WS] Progress for ${data.filename}: ${data.progress}% | Elapsed: ${data.elapsed}s | Speed: ${data.speed}x`);
+        }
+        
         switch (data.type) {
-          case 'state_update':
-            updateFileList(data.state);
-            break;
-          case 'files_detected':
-            updateFileList({ filesList: data.files.map(name => ({ name, status: 'pending' })) });
-            break;
           case 'file_start':
             updateFileStatus(data.filename, 'processing');
             break;
@@ -1365,29 +950,19 @@
             updateFileStatus(data.filename, 'error', { error: data.error });
             break;
           case 'transcription_progress':
+            console.log(`[WS] Updating progress for ${data.filename}:`, data);
             updateFileProgress(data.filename, data);
             break;
-          case 'all_complete':
-            // optional: show summary
-            if (typeof data.totalTime === 'number') {
-              Logger.log('TRANSCRIBE', 'All complete totalTime:', data.totalTime);
-            }
-            break;
-          case 'translation_state':
-            updateTranslationQueue(data.state.translationQueue);
-            break;
-          case 'translation_start':
-            updateTranslationStatus(data.filename, 'processing');
-            break;
-          case 'translation_complete':
-            updateTranslationStatus(data.filename, 'completed', { outPath: data.outPath });
-            break;
-          case 'translation_error':
-            updateTranslationStatus(data.filename, 'error', { error: data.error });
-            break;
           case 'debug_output':
-            // optional: append debug logs to an area if you have one
             Logger.debug('WEBSOCKET', 'DEBUG:', data.output);
+            appendDebugOutput(data);
+            break;
+          case 'files_cleared':
+            fileList.innerHTML = '';
+            fileList.appendChild(emptyState);
+            emptyState.style.display = 'block';
+            stagedFiles = [];
+            if (filePicker) filePicker.value = '';
             break;
           case 'info':
             if (data.message) showSuccess(data.message);
@@ -1397,63 +972,6 @@
             break;
           default:
             Logger.log('WEBSOCKET', 'Unhandled WS message type:', data.type);
-        }
-      }
-    
-      // UI update helpers (mostly unchanged)
-      function updateFileList(state) {
-        if (state && Array.isArray(state.filesList) && state.filesList.length > 0) {
-          emptyState.style.display = 'none';
-          
-          // Create a set of current filenames for efficient lookup
-          const currentFiles = new Set();
-          state.filesList.forEach(file => currentFiles.add(file.name));
-          
-          // Remove files that are no longer in the list (but keep staged files)
-          const existingItems = fileList.querySelectorAll('.file-item');
-          existingItems.forEach(item => {
-            const filename = item.dataset.filename;
-            // Check if this is a staged file
-            const stagedMarker = item.querySelector('.file-actions p');
-            const isStaged = stagedMarker && stagedMarker.textContent.includes('Staged for upload');
-            
-            // Only remove non-staged files that are not in the current list
-            if (!currentFiles.has(filename) && !isStaged) {
-              item.remove();
-            }
-          });
-          
-          // Add or update files in the list
-          state.filesList.forEach(file => {
-            let fileItem = fileList.querySelector(`[data-filename="${file.name}"]`);
-            if (!fileItem) {
-              // Create new item if it doesn't exist
-              fileItem = createFileItem(file.name, file.status);
-              fileList.appendChild(fileItem);
-            } else {
-              // Update status if item exists (but don't update staged files)
-              const stagedMarker = fileItem.querySelector('.file-actions p');
-              const isStaged = stagedMarker && stagedMarker.textContent.includes('Staged for upload');
-              if (!isStaged) {
-                updateFileStatus(file.name, file.status);
-              }
-            }
-          });
-        } else {
-          // Only clear if there are no staged files
-          const stagedFileItems = fileList.querySelectorAll('.file-item .file-actions p');
-          let hasStagedFiles = false;
-          stagedFileItems.forEach(item => {
-            if (item.textContent.includes('Staged for upload')) {
-              hasStagedFiles = true;
-            }
-          });
-          
-          if (!hasStagedFiles) {
-            fileList.innerHTML = '';
-            fileList.appendChild(emptyState);
-            emptyState.style.display = 'block';
-          }
         }
       }
     
@@ -1477,8 +995,14 @@
       }
     
       function updateFileStatus(filename, status, details = {}) {
-        const fileItem = fileList.querySelector(`[data-filename="${filename}"]`);
-        if (!fileItem) return;
+        let fileItem = fileList.querySelector(`[data-filename="${escapeSelector(filename)}"]`);
+        if (!fileItem) {
+          // Create new item if it doesn't exist
+          fileItem = createFileItem(filename, status);
+          fileList.appendChild(fileItem);
+          emptyState.style.display = 'none';
+        }
+        
         const statusEl = fileItem.querySelector('.file-status');
         const progressFill = fileItem.querySelector('.progress-fill');
         statusEl.className = `file-status status-${status}`;
@@ -1493,7 +1017,6 @@
           actions.innerHTML = `<p style="color:var(--info)">File uploaded successfully. Transcription started automatically.</p>`;
         } else if (status === 'completed') {
           if (progressFill) progressFill.style.width = '100%';
-          // Show the actual SRT path or a default message based on input path
           const srtPathDisplay = details.srtPath ? details.srtPath : 'SRT file generated';
           actions.innerHTML = `<p style="color:var(--success)">SRT generated: ${srtPathDisplay}</p>`;
         } else if (status === 'error') {
@@ -1506,157 +1029,97 @@
       }
     
       function updateFileProgress(filename, progressData) {
-        const fileItem = fileList.querySelector(`[data-filename="${filename}"]`);
-        if (!fileItem) return;
+        const fileItem = fileList.querySelector(`[data-filename="${escapeSelector(filename)}"]`);
+        if (!fileItem) {
+          console.log('Progress update: File item not found for', filename);
+          return;
+        }
+        
         const progressFill = fileItem.querySelector('.progress-fill');
         const elapsedElem = fileItem.querySelector('.elapsed');
         const remainingElem = fileItem.querySelector('.remaining');
         const speedElem = fileItem.querySelector('.speed-value');
-        const percentage = Math.min(100, progressData.progress || 0);
-        progressFill.style.width = `${percentage}%`;
-        if (elapsedElem) elapsedElem.textContent = progressData.elapsed ? progressData.elapsed.toFixed(1) : '0.0';
-        // Fix for inaccurate time remaining display
+        
+        const percentage = Math.min(100, Math.max(0, progressData.progress || 0));
+        
+        if (progressFill) {
+          progressFill.style.width = `${percentage}%`;
+          progressFill.style.transition = 'width 0.3s ease';
+        }
+        
+        if (elapsedElem) {
+          const elapsed = progressData.elapsed || progressData.processed || 0;
+          elapsedElem.textContent = typeof elapsed === 'number' ? elapsed.toFixed(1) : '0.0';
+        }
+        
         if (remainingElem) {
-          const remainingValue = progressData.remaining ? Math.max(0, progressData.remaining).toFixed(1) : '0.0';
-          remainingElem.textContent = remainingValue;
+          const remaining = progressData.remaining || 0;
+          remainingElem.textContent = typeof remaining === 'number' ? Math.max(0, remaining).toFixed(1) : '0.0';
         }
-        if (speedElem) speedElem.textContent = progressData.speed ? progressData.speed.toFixed(1) : '0.0';
-      }
-    
-      // Translation UI helpers
-      function updateTranslationQueue(queue) {
-        if (Array.isArray(queue) && queue.length > 0) {
-          emptyTranslationQueue.style.display = 'none';
-          translationQueue.innerHTML = '';
-          queue.forEach(job => translationQueue.appendChild(createTranslationJobItem(job.filename, job.status)));
-        } else {
-          translationQueue.innerHTML = '';
-          translationQueue.appendChild(emptyTranslationQueue);
-          emptyTranslationQueue.style.display = 'block';
-        }
-      }
-    
-      function createTranslationJobItem(filename, status = 'queued') {
-        const jobItem = document.createElement('div');
-        jobItem.className = 'file-item';
-        jobItem.dataset.filename = filename;
-        jobItem.innerHTML = `
-          <div class="file-info">
-            <span class="file-name">${filename}</span>
-            <div class="file-status status-${status}">${status}</div>
-          </div>
-          <div class="progress-bar"><div class="progress-fill"></div></div>
-          <div class="file-actions"></div>
-        `;
-        return jobItem;
-      }
-    
-      function updateTranslationStatus(filename, status, details = {}) {
-        const jobItem = translationQueue.querySelector(`[data-filename="${filename}"]`);
-        if (!jobItem) return;
-        const statusEl = jobItem.querySelector('.file-status');
-        const progressFill = jobItem.querySelector('.progress-fill');
-        statusEl.className = `file-status status-${status}`;
-        statusEl.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-        const actions = jobItem.querySelector('.file-actions');
-        if (status === 'processing') {
-          if (progressFill) progressFill.style.width = '0%';
-          actions.innerHTML = '';
-        } else if (status === 'uploaded') {
-          if (progressFill) progressFill.style.width = '100%';
-          actions.innerHTML = `<p style="color:var(--info)">File uploaded successfully. Translation started automatically.</p>`;
-        } else if (status === 'completed') {
-          if (progressFill) progressFill.style.width = '100%';
-          // Show the actual translated SRT path or a default message
-          const outPathDisplay = details.outPath ? details.outPath : 'Translated SRT file generated';
-          actions.innerHTML = `<p style="color:var(--success)">Translation completed: ${outPathDisplay}</p>`;
-        } else if (status === 'error') {
-          if (progressFill) {
-            progressFill.style.width = '100%';
-            progressFill.style.backgroundColor = 'var(--error)';
+        
+        if (speedElem) {
+          const speed = progressData.speed;
+          if (speed === 'N/A' || speed === null || speed === undefined) {
+            speedElem.textContent = 'N/A';
+          } else {
+            speedElem.textContent = typeof speed === 'number' ? speed.toFixed(1) : '0.0';
           }
-          actions.innerHTML = `<p style="color:var(--error)">Error: ${details.error || ''}</p>`;
         }
+        
+        console.log(`Progress update for ${filename}: ${percentage}% | Speed: ${progressData.speed}x`);
       }
     
-      // Notify helpers
-      function showError(message, container = 'body') {
-        Logger.error('UI', message);
-        // keep UI simple — reuse existing show behavior
+      function showError(message) {
         const el = document.createElement('div');
         el.className = 'error-message';
         el.textContent = message;
-        document.querySelector(container).appendChild(el);
+        el.style.cssText = 'position: fixed; top: 20px; right: 20px; background: var(--error-bg); color: var(--error); padding: 1rem; border-radius: 8px; border: 1px solid var(--error); z-index: 1000;';
+        document.body.appendChild(el);
         setTimeout(() => el.remove(), 5000);
       }
-      function showSuccess(message, container = 'body') {
-        Logger.log('UI', message);
+      
+      function showSuccess(message) {
         const el = document.createElement('div');
         el.className = 'success-message';
         el.textContent = message;
-        document.querySelector(container).appendChild(el);
+        el.style.cssText = 'position: fixed; top: 20px; right: 20px; background: var(--success-bg); color: var(--success); padding: 1rem; border-radius: 8px; border: 1px solid var(--success); z-index: 1000;';
+        document.body.appendChild(el);
         setTimeout(() => el.remove(), 4000);
       }
     
-        // File Picker Functionality
+      // File Picker Functionality
       const filePicker = document.getElementById('filePicker');
       const openFilePickerBtn = document.getElementById('openFilePickerBtn');
       const uploadFilesBtn = document.getElementById('uploadFilesBtn');
       
-      // SRT File Picker Functionality
-      const srtFilePicker = document.getElementById('srtFilePicker');
-      const openSrtFilePickerBtn = document.getElementById('openSrtFilePickerBtn');
-      const uploadSrtFilesBtn = document.getElementById('uploadSrtFilesBtn');
-      
-      // Keep selected FileList in memory
       let stagedFiles = [];
-      let stagedSrtFiles = [];
 
-      // Click -> open native file dialog
       openFilePickerBtn && openFilePickerBtn.addEventListener('click', () => filePicker.click());
-      openSrtFilePickerBtn && openSrtFilePickerBtn.addEventListener('click', () => srtFilePicker.click());
 
-      // When user selects files in dialog, cache them and update UI preview
       filePicker && filePicker.addEventListener('change', (ev) => {
         const files = Array.from(ev.target.files || []);
         if (!files.length) return;
-        // merge new files avoid duplicates by name
         const existingNames = new Set(stagedFiles.map(f => f.name));
         for (const f of files) {
           if (!existingNames.has(f.name)) stagedFiles.push(f);
         }
         renderStagedFiles();
       });
-      
-      // When user selects SRT files in dialog, cache them and update UI preview
-      srtFilePicker && srtFilePicker.addEventListener('change', (ev) => {
-        const files = Array.from(ev.target.files || []);
-        if (!files.length) return;
-        // merge new files avoid duplicates by name
-        const existingNames = new Set(stagedSrtFiles.map(f => f.name));
-        for (const f of files) {
-          if (!existingNames.has(f.name)) stagedSrtFiles.push(f);
-        }
-        renderStagedSrtFiles();
-      });
 
-      // Click Upload button -> start uploading and processing staged files one by one
       uploadFilesBtn && uploadFilesBtn.addEventListener('click', async () => {
         if (!stagedFiles.length) { showError('No files selected to upload.'); return; }
         uploadFilesBtn.disabled = true;
         uploadFilesBtn.textContent = 'Processing...';
         
         try {
-          // Process files one by one
           for (const file of stagedFiles) {
             updateFileStatus(file.name, 'processing');
             await uploadAndProcessSingleFile(file);
           }
           showSuccess('All files processed successfully.');
-          // clear staged files array
           stagedFiles = [];
-          filePicker.value = ''; // reset file input
-          renderStagedFiles(); // Update UI to remove staged files
+          filePicker.value = '';
+          renderStagedFiles();
         } catch (err) {
           showError('Processing failed: ' + (err.message || err));
         } finally {
@@ -1664,86 +1127,44 @@
           uploadFilesBtn.textContent = 'Upload & Process';
         }
       });
-      
-      // Click Upload SRT button -> start uploading staged SRT files
-      uploadSrtFilesBtn && uploadSrtFilesBtn.addEventListener('click', async () => {
-        if (!stagedSrtFiles.length) { showError('No SRT files selected to upload.'); return; }
-        uploadSrtFilesBtn.disabled = true;
-        uploadSrtFilesBtn.textContent = 'Uploading...';
-        
-        try {
-          await uploadStagedSrtFiles();
-          showSuccess('All SRT files uploaded successfully. Translation started automatically.');
-          // clear staged files array
-          stagedSrtFiles = [];
-          srtFilePicker.value = ''; // reset file input
-          renderStagedSrtFiles(); // Update UI to remove staged files
-        } catch (err) {
-          showError('Upload failed: ' + (err.message || err));
-        } finally {
-          uploadSrtFilesBtn.disabled = false;
-          uploadSrtFilesBtn.textContent = 'Upload & Translate';
-        }
-      });
 
-      // Show staged files in your file-list preview (reuses createFileItem)
       function renderStagedFiles() {
-        // If no staged files, don't modify the UI
-        if (stagedFiles.length === 0) return;
+        if (stagedFiles.length === 0) {
+          const stagedItems = fileList.querySelectorAll('.file-item');
+          stagedItems.forEach(item => {
+            const actions = item.querySelector('.file-actions p');
+            if (actions && actions.textContent.includes('Staged for upload')) {
+              item.remove();
+            }
+          });
+          if (fileList.querySelectorAll('.file-item').length === 0) {
+            emptyState.style.display = 'block';
+          }
+          return;
+        }
         
-        // If fileList is empty or showing emptyState, remove it
         if (fileList.contains(emptyState)) emptyState.style.display = 'none';
         
-        // preserve any existing items (server state) — append staged files if not already present
         for (const f of stagedFiles) {
           const already = fileList.querySelector(`[data-filename="${escapeSelector(f.name)}"]`);
           if (!already) {
-            // createFileItem returns an element with dataset.filename
             const el = createFileItem(f.name, 'pending');
-            // attach a small "staged" marker in actions area
             const actions = el.querySelector('.file-actions');
             if (actions) actions.innerHTML = `<p style="color:var(--text-tertiary)">Staged for upload</p>`;
             fileList.appendChild(el);
           }
         }
       }
-      
-      // Show staged SRT files in translation queue preview
-      function renderStagedSrtFiles() {
-        // If no staged files, don't modify the UI
-        if (stagedSrtFiles.length === 0) return;
-        
-        // If translationQueue is empty or showing emptyTranslationQueue, remove it
-        if (translationQueue.contains(emptyTranslationQueue)) emptyTranslationQueue.style.display = 'none';
-        
-        // preserve any existing items (server state) — append staged files if not already present
-        for (const f of stagedSrtFiles) {
-          const already = translationQueue.querySelector(`[data-filename="${escapeSelector(f.name)}"]`);
-          if (!already) {
-            // createTranslationJobItem returns an element with dataset.filename
-            const el = createTranslationJobItem(f.name, 'pending');
-            // attach a small "staged" marker in actions area
-            const actions = el.querySelector('.file-actions');
-            if (actions) actions.innerHTML = `<p style="color:var(--text-tertiary)">Staged for upload</p>`;
-            translationQueue.appendChild(el);
-          }
-        }
-      }
 
-      // Helper: upload and process a single file
       async function uploadAndProcessSingleFile(file) {
-        // update UI status -> uploading
         updateFileStatus(file.name, 'processing');
-        // Upload the file
         const uploadResponse = await uploadFileToServer(file, '/api/upload');
         
-        // Wait for processing to complete by listening to WebSocket messages
         return new Promise((resolve, reject) => {
           const timeout = setTimeout(() => {
             reject(new Error('Processing timeout'));
-          }, 300000); // 5 minute timeout
+          }, 300000);
           
-          // Listen for WebSocket messages to determine when processing is complete
           const handleMessage = (event) => {
             try {
               const data = JSON.parse(event.data);
@@ -1764,17 +1185,7 @@
           ws.addEventListener('message', handleMessage);
         });
       }
-      
-      // Helper: upload all staged SRT files sequentially
-      async function uploadStagedSrtFiles() {
-        for (const file of stagedSrtFiles) {
-          // update UI status -> uploading
-          updateTranslationStatus(file.name, 'processing');
-          await uploadFileToServer(file, '/api/upload-srt');
-        }
-      }
 
-      // Upload a file to the server with XHR to display progress events
       function uploadFileToServer(file, endpoint) {
         return new Promise((resolve, reject) => {
           const xhr = new XMLHttpRequest();
@@ -1784,17 +1195,8 @@
           xhr.upload.onprogress = (e) => {
             if (e.lengthComputable) {
               const percent = Math.round((e.loaded / e.total) * 100);
-              // Update progress for transcription files
               if (endpoint === '/api/upload') {
                 updateFileProgress(file.name, { progress: percent });
-              } 
-              // Update progress for translation files
-              else if (endpoint === '/api/upload-srt') {
-                const jobItem = translationQueue.querySelector(`[data-filename="${escapeSelector(file.name)}"]`);
-                if (jobItem) {
-                  const progressFill = jobItem.querySelector('.progress-fill');
-                  if (progressFill) progressFill.style.width = percent + '%';
-                }
               }
             }
           };
@@ -1802,28 +1204,17 @@
           xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) {
               const response = JSON.parse(xhr.response);
-              // Update status for transcription files
               if (endpoint === '/api/upload') {
                 updateFileStatus(file.name, 'uploaded');
                 const fileItem = fileList.querySelector(`[data-filename="${escapeSelector(file.name)}"]`);
                 if (fileItem) {
                   fileItem.dataset.filePath = response.filePath;
                 }
-              } 
-              // Update status for translation files
-              else if (endpoint === '/api/upload-srt') {
-                updateTranslationStatus(file.name, 'uploaded');
-                const jobItem = translationQueue.querySelector(`[data-filename="${escapeSelector(file.name)}"]`);
-                if (jobItem) {
-                  jobItem.dataset.filePath = response.filePath;
-                }
               }
               resolve(response);
             } else {
               if (endpoint === '/api/upload') {
                 updateFileStatus(file.name, 'error', { message: 'Upload failed' });
-              } else if (endpoint === '/api/upload-srt') {
-                updateTranslationStatus(file.name, 'error', { message: 'Upload failed' });
               }
               reject(new Error('Upload failed'));
             }
@@ -1832,8 +1223,6 @@
           xhr.onerror = () => {
             if (endpoint === '/api/upload') {
               updateFileStatus(file.name, 'error', { message: 'Network error' });
-            } else if (endpoint === '/api/upload-srt') {
-              updateTranslationStatus(file.name, 'error', { message: 'Network error' });
             }
             reject(new Error('Network error'));
           };
@@ -1843,17 +1232,49 @@
         });
       }
 
-      // Helper to escape CSS selectors
       function escapeSelector(selector) {
         return selector.replace(/[!"#$%&'()*+,\-./:;<=>?@\[\]^`{|}~]/g, '\\$&');
       }
+      
+      // Debug console functions
+      function appendDebugOutput(data) {
+        if (!debugOutput) return;
+        
+        const timestamp = new Date().toLocaleTimeString();
+        const processInfo = data.filename ? `[${data.processType?.toUpperCase() || 'UNKNOWN'}:${data.filename}]` : '[SYSTEM]';
+        const isError = data.isError ? ' ERROR' : '';
+        const output = data.output || '';
+        
+        if (debugOutput.textContent.includes('Waiting for debug output...')) {
+          debugOutput.textContent = '';
+        }
+        
+        const logLine = `[${timestamp}] ${processInfo}${isError} ${output.trim()}\n`;
+        debugOutput.textContent += logLine;
+        
+        debugOutput.scrollTop = debugOutput.scrollHeight;
+        
+        const lines = debugOutput.textContent.split('\n');
+        if (lines.length > 1000) {
+          debugOutput.textContent = lines.slice(-1000).join('\n');
+        }
+      }
+      
+      function toggleDebugConsole() {
+        if (debugConsole.style.display === 'none') {
+          debugConsole.style.display = 'block';
+          toggleDebugBtn.innerHTML = '<i class="fas fa-terminal"></i> Hide Debug';
+        } else {
+          debugConsole.style.display = 'none';
+          toggleDebugBtn.innerHTML = '<i class="fas fa-terminal"></i> Show Debug';
+        }
+      }
 
-      // Start / Translate button handlers
+      // Start button handler
       transcribePathBtn.addEventListener('click', async () => {
         let p = localPathInput.value.trim();
         const model = document.getElementById('modelSelect').value;
         
-        // Only process direct paths, not uploaded files (since they're auto-transcribed)
         if (!p) { 
           showError('Please enter a server path for direct transcription.'); 
           return; 
@@ -1870,118 +1291,51 @@
           showError(error.message);
         } finally {
           transcribePathBtn.disabled = false;
-          transcribePathBtn.textContent = 'Start';
-        }
-      });    
-      translateBtn.addEventListener('click', async () => {
-        const srtPath = srtPathInput.value.trim();
-        if (!srtPath) { showError('Please enter a path to an SRT file.'); return; }
-        const sourceLang = sourceLangSelect.value;
-        const targetLang = targetLangSelect.value;
-        translateBtn.disabled = true;
-        translateBtn.textContent = 'Queuing...';
-        try {
-          const r = await fetch('/api/translate', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ srtPath, sourceLang, targetLang }) });
-          if (!r.ok) { const d = await r.json(); throw new Error(d.error || 'Failed to start translation'); }
-          srtPathInput.value = '';
-          showSuccess('Translation queued successfully');
-        } catch (e) {
-          showError(e.message);
-        } finally {
-          translateBtn.disabled = false;
-          translateBtn.textContent = 'Translate';
+          transcribePathBtn.textContent = 'Process Path';
         }
       });
     
-      // CONTROL BUTTONS (stop / clear)
+      // Control buttons
       function stopCurrentProcess() {
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'stop_process' }));
           showSuccess('Stop command sent to server');
-          // DO NOT clear list here — server will update states and UI on broadcast
-        } else {
-          showError('Not connected to server');
-        }
-      }
-    
-      function stopTranslationProcess() {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'stop_translation' }));
-          showSuccess('Stop translation command sent to server');
-          // DO NOT clear translation queue here — server will broadcast updates
         } else {
           showError('Not connected to server');
         }
       }
     
       function clearFileList() {
-        // Update local UI immediately
         fileList.innerHTML = '';
         fileList.appendChild(emptyState);
         emptyState.style.display = 'block';
-        // Re-enable controls
-        if (transcribePathBtn) { transcribePathBtn.disabled = false; transcribePathBtn.textContent = 'Transcribe Path'; }
-        // Tell server to clear canonical state so other clients sync
+        if (transcribePathBtn) { transcribePathBtn.disabled = false; transcribePathBtn.textContent = 'Process Path'; }
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'clear_files' }));
         }
         showSuccess('File list cleared');
       }
     
-      function clearTranslationList() {
-        translationQueue.innerHTML = '';
-        translationQueue.appendChild(emptyTranslationQueue);
-        emptyTranslationQueue.style.display = 'block';
-        if (translateBtn) { translateBtn.disabled = false; translateBtn.textContent = 'Translate'; }
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'clear_translation' }));
-        }
-        showSuccess('Translation list cleared');
-      }
-    
-      // wire control buttons
       stopProcessBtn && stopProcessBtn.addEventListener('click', stopCurrentProcess);
       clearListBtn && clearListBtn.addEventListener('click', clearFileList);
-      stopTranslationBtn && stopTranslationBtn.addEventListener('click', stopTranslationProcess);
-      clearTranslationBtn && clearTranslationBtn.addEventListener('click', clearTranslationList);
+      toggleDebugBtn && toggleDebugBtn.addEventListener('click', toggleDebugConsole);
     
-      // languages, system info, initial connect
-      async function populateLanguages() {
-        try {
-          const r = await fetch('/language.json');
-          const languages = await r.json();
-          for (const code in languages) {
-            const opt = new Option(languages[code], code);
-            sourceLangSelect.add(opt.cloneNode(true));
-            targetLangSelect.add(opt);
-          }
-          sourceLangSelect.value = 'auto';
-          targetLangSelect.value = 'en';
-        } catch (err) {
-          Logger.error('UI', 'Failed to populate languages', err);
-        }
-      }
-    
+      // System info
       async function updateSystemInfo() {
         const systemInfoDiv = document.getElementById('system-info');
         try {
           const r = await fetch('/system-info');
           if (!r.ok) throw new Error('Failed to fetch system info');
           const data = await r.json();
-          const ramUsed = (data.ram.used / (1024 * 1024)).toFixed(2);
-          const ramTotal = (data.ram.total / (1024 * 1024)).toFixed(2);
-          const swapUsed = (data.swap.used / (1024 * 1024)).toFixed(2);
-          const swapTotal = (data.swap.total / (1024 * 1024)).toFixed(2);
-          systemInfoDiv.innerHTML = `RAM: ${ramUsed} GB / ${ramTotal} GB | Swap: ${swapUsed} GB / ${swapTotal} GB`;
+          systemInfoDiv.innerHTML = `Memory: RSS ${data.memory.rss}MB | Heap ${data.memory.heapUsed}/${data.memory.heapTotal}MB | External ${data.memory.external}MB`;
         } catch (err) {
           Logger.error('UI', 'System info error', err);
           systemInfoDiv.innerHTML = 'Failed to load system info.';
         }
       }
     
-      // kick things off
+      // Initialize
       connectWebSocket();
-      populateLanguages();
       updateSystemInfo();
       setInterval(updateSystemInfo, 5000);
     });

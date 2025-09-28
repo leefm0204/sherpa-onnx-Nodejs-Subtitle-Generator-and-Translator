@@ -225,14 +225,15 @@ async function main() {
   let cancelled = false;
 
   // Handle cancellation signals
-  const signalHandler = () => {
+  const signalHandler = (signal) => {
     cancelled = true;
-    Logger.log('TRANSLATE', "[INFO] Translation process cancelled by user");
+    Logger.log('TRANSLATE', `[INFO] Translation process cancelled by ${signal}`);
+    // Exit immediately
     process.exit(0);
   };
 
-  process.on("SIGINT", signalHandler);
-  process.on("SIGTERM", signalHandler);
+  process.on("SIGINT", () => signalHandler('SIGINT'));
+  process.on("SIGTERM", () => signalHandler('SIGTERM'));
 
   for (const file of files) {
     // Check if cancelled before processing each file

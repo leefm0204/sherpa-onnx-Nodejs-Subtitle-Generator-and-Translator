@@ -553,7 +553,7 @@ process.on('SIGINT', () => {
             Logger.error("TRANSCRIBE", `Failed to kill ffmpeg process with SIGKILL: ${error.message}`);
           }
         }
-      }, 2000);
+      }, 1000);
     } catch (error) {
       Logger.error("TRANSCRIBE", `Error terminating ffmpeg process: ${error.message}`);
     }
@@ -561,11 +561,11 @@ process.on('SIGINT', () => {
     Logger.log("TRANSCRIBE", "No active ffmpeg process to terminate");
   }
   
-  // Give some time for cleanup before exiting
+  // Exit quickly if no ffmpeg process
   setTimeout(() => {
     Logger.log("TRANSCRIBE", "Exiting process...");
     process.exit(0);
-  }, 3000);
+  }, 1000);
 });
 
 process.on('SIGTERM', () => {
@@ -580,7 +580,7 @@ process.on('SIGTERM', () => {
         activeFfmpegProcess.kill('SIGTERM');
       }
       
-      // Force kill if SIGTERM doesn't work after 2 seconds
+      // Force kill if SIGTERM doesn't work after 1 second
       setTimeout(() => {
         if (activeFfmpegProcess && !activeFfmpegProcess.killed) {
           Logger.log("TRANSCRIBE", "Force killing ffmpeg process with SIGKILL...");
@@ -590,7 +590,8 @@ process.on('SIGTERM', () => {
             Logger.error("TRANSCRIBE", `Failed to kill ffmpeg process with SIGKILL: ${error.message}`);
           }
         }
-      }, 2000);
+        process.exit(0);
+      }, 1000);
     } catch (error) {
       Logger.error("TRANSCRIBE", `Error terminating ffmpeg process: ${error.message}`);
     }
@@ -598,11 +599,11 @@ process.on('SIGTERM', () => {
     Logger.log("TRANSCRIBE", "No active ffmpeg process to terminate");
   }
   
-  // Give some time for cleanup before exiting
+  // Exit quickly
   setTimeout(() => {
     Logger.log("TRANSCRIBE", "Exiting process...");
     process.exit(0);
-  }, 3000);
+  }, 1000);
 });
 
 main();
